@@ -22,6 +22,8 @@ static int tickMessageLength = 4;
 extern bool pendingWrite;
 extern bool pendingReceive;
 
+static int number_of_messages_to_send = 0;
+
 /* enum for main loop flow control */
 enum state {
 	USB_FINALIZE,
@@ -40,6 +42,7 @@ enum commands {
 	INVALID_CMD, 	/* No command selected */
 	TESTSEND,		/* Send 1 message to MCU */
 	TESTSEND10,             /* Send 10 messages to MCU */
+	TESTSEND_N,             /* Send N messages to MCU */
 	TESTRECV,		/* Set up receive of 1 message from MCU */
 	TESTRECV10, 	/* Set up receive of 10 messages from MCU */
 	TESTSENDRECV,	/* Send and set up receive of 1 message to/from MCU */
@@ -63,6 +66,9 @@ void sendNTicks(libusb_context* context, libusb_device_handle* efm_handle, int n
 /* Print helpers */
 void printStartupMsg(void);
 void printHelpString(void);
+
+/* General helpers */
+static int splitOnSpaceGetLast(char* stringBuffer);
 
 int main(void) {
 	printStartupMsg();
@@ -161,6 +167,9 @@ void mainloop(libusb_context* context) {
 				case TESTSEND10:
 					sendNTicks(context, efm_handle, 10);
 					break;
+				case TESTSEND_N:
+					sendNTicks(context, efm_handle, number_of_messages_to_send);
+					break;
 				case TESTRECV :
 					testRecv(context, efm_handle);
 					break;
@@ -219,7 +228,10 @@ int commandloop() {
 		} else if ((strcmp(stringBuffer, "testsend10") == 0)) {
 			cmd = TESTSEND10;
 		} else if ((strcmp(stringBuffer, "ts10") == 0)) {
-				cmd = TESTSEND10;
+			cmd = TESTSEND10;
+		} else if ((strncmp(stringBuffer, "testsendn", 9)) == 0) {
+			number_of_messages_to_send = splitOnSpaceGetLast((char*)stringBuffer);
+			cmd = TESTSEND_N;
 		} else if (strcmp(stringBuffer, "testrecv") == 0) {
 			cmd = TESTRECV;
 		} else if (strcmp(stringBuffer, "tr") == 0) {
@@ -319,7 +331,6 @@ void testRecv(libusb_context* context, libusb_device_handle* efm_handle) {
 }
 
 /* Test function : send 1 message, recv 1 message */
-
 void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle) {
 	debugprint("Attempting to send tick message to Ytelse MCU", BLUE);
 	while (1) {
@@ -359,6 +370,15 @@ void receiveNMsgs(libusb_context* context, libusb_device_handle* efm_handle, int
 		}
 		printf("Received message: %s\n", receiveBuffer);
 	}
+}
+
+
+/* Get the number of messages from space separated string input */
+static int splitOnSpaceGetLast(char* stringBuffer) {
+	strsep((char**)&stringBuffer, " ");
+	char* token = strsep((char**)&stringBuffer, " ");
+	int number = atoi(token);
+	return number;
 }
 
 /* Print convenience functions */
@@ -417,6 +437,7 @@ void printHelpString(void) {
 	printf("testsend, ts        --  Send 1 message to MCU\n");
 	printf("testrecv, tr        --  Set up receive of 1 message from MCU\n");
 	printf("testsend10, ts10    --  Send 10 messages to MCU\n");
+	printf("testsendn N         --  Send N messages to MCU\n");
 	printf("testrecv10, tr10    --  Set up receive of 10 messages from MCU\n");
 	printf("testsendrecv, tsr   --  Send and set up receive of 1 message to/from MCU\n");
 	printf("quit, exit          --  Quit the program\n");
