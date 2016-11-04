@@ -40,11 +40,13 @@ LDFLAGS:=$(LIBS) -lusb-1.0
 ################
 
 CSRC:= $(addprefix $(SRCDIR)/, \
-main.c \
 callbacks.c \
+cmd_parser.c \
+debug.c \
+main.c \
+test_usb_functs.c \
 usb_helpers.c \
 ytelse_comm.c \
-debug.c \
 )
 
 C_FILES := $(notdir $(CSRC))

@@ -15,5 +15,7 @@ enum {RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, DEFAULT};
 void debugprint(char* string, int color);
 /* Print in specified color, no matter if DEBUG is defined */
 void colorprint(char* string, int color);
+/* Print startup message */
+void printStartupMsg(void);
 
 #endif

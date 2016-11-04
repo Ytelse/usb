@@ -1,13 +1,17 @@
-#ifndef __EFM32_COMM_H_
-#define __EFM32_COMM_H_
+#ifndef __YTELSE_COMM_H_
+#define __YTELSE_COMM_H_
 
 #include <libusb.h>
 
-/* Error codes */
-enum {YTELSE_DEVICE_USB_OPEN_SUCCESS, YTELSE_DEVICE_NOT_FOUND, YTELSE_DEVICE_USB_OPEN_FAILURE};
+/* Device types */
+typedef enum Devices {MCU_DEVICE, FPGA_DEVICE} ytelse_device_t;
 
-int get_ytelse_mcu_handle(libusb_context* context, libusb_device_handle** dev_handle);
-/* Prototype for connecting to the FPGA */
-int get_ytelse_fpga_handle(libusb_context* context, libusb_device_handle** dev_handle);
+/* Return codes */
+enum {CONNECT_SUCCESS, CONNECT_FAILURE};
 
-#endif /* __EFM32_COMM_H_ */
+int connect(libusb_context* context,			/* In  */ /* libusb context */
+			libusb_device_handle** dev_handle, 	/* Out */ /* Pointer to usb handle */
+			ytelse_device_t device,				/* In  */ /* Type of device to conenct to */
+			int* interface);					/* Out */ /* Device interface claimed by host */
+
+#endif /* __YTELSE_COMM_H_ */

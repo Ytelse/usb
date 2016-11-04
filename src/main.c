@@ -1,80 +1,92 @@
 #include "debug.h"
 #include "ytelse_comm.h"
-#include "usb_helpers.h"
+#include "cmd_parser.h"
 
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <assert.h>
 #include <libusb.h>
 #include <ctype.h>
-
-// /* Data to send to device every tick */
-static unsigned char sendBuffer[512];
-static unsigned char receiveBuffer[512];
-
-static unsigned char tickMessage[] = "tick";
-static int tickMessageLength = 4;
-
-extern bool pendingWrite;
-extern bool pendingReceive;
+#include <signal.h>
 
 /* enum for main loop flow control */
-enum state {
-	USB_FINALIZE,
-	USB_DEVICE_CONNECTED,
-	USB_DEVICE_DISCONNECTED,
-	USB_DEVICE_FOUND,
-	USB_DEVICE_NOT_FOUND,
-	USB_DEVICE_INTERFACE_CLAIMED, 
-	USB_DEVICE_INTERFACE_BUSY, 
-	USB_DEVICE_INTERFACE_NOT_FOUND
-};
+typedef enum MainloopState {
+	/* Overall */
+	INIT,							/* Initial state */
+	FINALIZE, 						/* Exit state, stop all communication */
+	CONNECTING,						/* Connect to one or more devices */
+	RUNNING,						/* Host is sending data to FPGA and receiving results from MCU */
+	STOPPING,						/* Halt the program without releasing devices and quitting */
+	TESTING,						/* Running some test function for a device */
+	GET_CMD,						/* Waiting for command input */
+	UNDEFINED						/* Undefined state */
+} main_state_t;
 
-/* enum for run-time commands, add more as necessary */
+typedef enum USBState {
+	DISCONNECTED,					/* No USB devices connected to host */
+	CONNECTED,						/* Both USB devices connected to host */
+	CONNECTED_FPGA,					/* Only FPGA connected to host */
+	CONNECTED_MCU,					/* Only MCU connected to host */
+	CONNECTING_ALL,					/* Attempting to connect to both devices */
+	CONNECTING_FPGA,				/* Attempting to connect to FPGA */
+	CONNECTING_MCU,					/* Attempting to connect to MCU */
+} usb_state_t;
 
-enum commands {
-	INVALID_CMD, 	/* No command selected */
-	TESTSEND,		/* Send 1 message to MCU */
-	TESTSEND10,             /* Send 10 messages to MCU */
-	TESTRECV,		/* Set up receive of 1 message from MCU */
-	TESTRECV10, 	/* Set up receive of 10 messages from MCU */
-	TESTSENDRECV,	/* Send and set up receive of 1 message to/from MCU */
-	HELP, 			/* Print available commands */
-	QUIT			/* Quit the program */
-};
+typedef enum Tests {
+	/* MCU tests, add more as needed */
+	MCU_TESTSEND_TEST,
+	MCU_TESTSEND10_TEST,
+	MCU_TESTRECV_TEST,
+	MCU_TESTRECV10_TEST,
+	MCU_TESTSENDRECV_TEST,
+	/* FPGA tests, currently just placeholders */
+	FPGA_TESTSEND_TEST,
+	FPGA_TESTSEND10_TEST,
+	FPGA_TESTRECV_TEST,
+	FPGA_TESTRECV10_TEST,
+	FPGA_TESTSENDRECV_TEST,
+	/* Initial value */
+	NO_TEST
+} test_t;
+
+typedef struct State {
+	main_state_t main_state; /* State of mainloop */
+	usb_state_t usb_state;
+	cmd_t cmd;
+	test_t test;
+} state_t;
+
+/* Catch ctrl-c */
+
+volatile sig_atomic_t _kill;
+
+void inthand(int signum) {
+    _kill = 1;
+}
 
 /* Function prototypes */
 void mainloop(libusb_context* context);
+void next_state(state_t* state);
+void init_state(state_t* state);
+void finalize(state_t state, libusb_device_handle* mcu_handle, libusb_device_handle* fpga_handle, int mcu_interface, int fpga_interface);
 int commandloop(void);
 
-/* Test functions */
-void sendTick(libusb_context* context, libusb_device_handle* efm_handle);
-void testRecv(libusb_context* context, libusb_device_handle* efm_handle);
-void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int num_messages);
-void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle);
-void receiveNMsgs(libusb_context* context, libusb_device_handle* efm_handle, int num_recvs);
-void sendNTicks(libusb_context* context, libusb_device_handle* efm_handle, int num_ticks);
-
-
-/* Print helpers */
-void printStartupMsg(void);
-void printHelpString(void);
-
 int main(void) {
+
+	/* Handle ctrl-c gracefully */
+	signal(SIGINT, inthand);
+
 	printStartupMsg();
 
 	libusb_context* context = NULL;
 	int rc = 0;
 
 	/* Initialize libusb */
-	colorprint("Initializing libusb...", DEFAULT);
+	debugprint("Initializing libusb...", DEFAULT);
 	rc = libusb_init(&context);
 	if (rc) {
-		colorprint("Failed to initialize libusb! Exiting...", RED);
+		colorprint("ERROR: Failed to initialize libusb! Exiting...", RED);
 		return EXIT_FAILURE;
 	}
 
@@ -86,109 +98,193 @@ int main(void) {
 }
 
 void mainloop(libusb_context* context) {
+	/* Program state */
+	state_t state;
+	
+	init_state(&state);
+	
+	/* Return codes */
+	//int rc = 0;
 
-	int status = USB_DEVICE_NOT_FOUND;
-	int cmd = INVALID_CMD;
-	int interface = 0;
-	int rc = 0;
-	libusb_device_handle* efm_handle = NULL;
+	/* Device handles */
+	libusb_device_handle *mcu_handle, *fpga_handle; mcu_handle = fpga_handle = NULL;
+	int mcu_interface, fpga_interface; mcu_interface = fpga_interface = 0;
 
-	while (status != USB_FINALIZE) {
-		/* Get device handle */
-		colorprint("Establishing connection to EFM32 USB device...", DEFAULT);
-		// Keep trying until it connects
-		while(get_ytelse_mcu_handle(context, &efm_handle));
+	while (state.main_state != FINALIZE) {
 
-		debugprint("Successfully got EFM32 handle!", GREEN);
-		status = USB_DEVICE_FOUND;
+		next_state(&state);
 
-		/* Claim device USB interface */
-		debugprint("Claiming EFM32 USB interface...", DEFAULT);
-		while(status != USB_DEVICE_INTERFACE_CLAIMED) {
-			// Request resource from OS 
-			rc = libusb_claim_interface(efm_handle, interface);
-			
-			if (rc == LIBUSB_ERROR_NOT_FOUND) {
-				/* 
-					Interface not found on current device. Should not happen.
-					Just in order to do something, increment interface number
-					and try again.
-					TODO: Test this approach
-				*/
-				debugprint("Interface not found! Trying another...", RED);
-				status = USB_DEVICE_INTERFACE_NOT_FOUND;
-				interface++;
-				interface = interface % 10;
-			} else if (rc == LIBUSB_ERROR_BUSY) {
-				/* 
-					USB device claimed by some other process. Should not be a problem.
-					Do nothing, wait for it to become free.
-				*/
-				debugprint("Device busy, trying again...", YELLOW);
-				status = USB_DEVICE_INTERFACE_BUSY;
-				sleep(1); //Wait a second before trying again.
-			} else if (rc == LIBUSB_ERROR_NO_DEVICE) {
-				/*
-					Device has disconnected, and we need to find it again.
-					Break from interface claiming loop and return to waiting
-					for it to connect.
-				*/
-				debugprint("Device disconnected!", RED);
-				status = USB_DEVICE_NOT_FOUND;
-				break;
-			} else {
-				debugprint("Successfully claimed EFM32 USB interface!", GREEN);
-				status = USB_DEVICE_INTERFACE_CLAIMED;
-			}
+		if (state.main_state == GET_CMD) {
+			state.cmd = commandloop();
 		}
 
-		char nameBuffer[200];
-		int nameLength = getDeviceName(efm_handle, nameBuffer, 200);
-		if (nameLength < 0) {
-			colorprint("Failed to get device name...", YELLOW);
-		} else {
-			colorprint("Connected to:", BLUE);
-			colorprint(nameBuffer, BLUE);
+		if (_kill) {
+			state.main_state = FINALIZE;
 		}
-		colorprint("Connection established!", GREEN);
+	}
 
-		while (cmd != QUIT) {
-			cmd = commandloop();
-			switch (cmd) {
-				case TESTSEND :
-					sendTick(context, efm_handle);
+	finalize(state, mcu_handle, fpga_handle, mcu_interface, fpga_interface);
+}
+
+/* The world's largest and messiest switch...? */
+/* TODO: Complete the switch cases*/
+
+void next_state(state_t* state) {
+	state_t next;
+	/* Copy values, cmd not needed as it will not change */
+	next.main_state = state->main_state;
+	next.usb_state = state->usb_state;
+	next.test = state->test;
+
+	switch (state->main_state) {
+		case INIT :
+			next.main_state = GET_CMD;
+			break;
+		case GET_CMD :
+			switch (state->usb_state) {
+				case DISCONNECTED :
+					switch (state->cmd) {
+						case CONNECT :
+							next.main_state = CONNECTING;
+							next.usb_state = CONNECTING_ALL;
+							break;
+						case CONNECT_MCU :
+							next.main_state = CONNECTING;
+							next.usb_state = CONNECTING_MCU;
+							break;
+						case CONNECT_FPGA :
+							next.main_state = CONNECTING;
+							next.usb_state = CONNECTING_FPGA;
+							break;
+						case QUIT :
+							next.main_state = FINALIZE;
+							break;
+						case HELP :
+							next.main_state = GET_CMD;
+							print_help_string();
+							break;
+						default :
+							printf("No connected devices.\n");
+							next.main_state = GET_CMD;
+							break;
+					}
 					break;
-				case TESTSEND10:
-					sendNTicks(context, efm_handle, 10);
+				case CONNECTED :
+					switch (state->cmd) {
+						case MCU_TESTSEND :
+						case RUN :
+						case RUN_FPGA :
+						case RUN_MCU :
+						case STOP_FPGA :
+						case STOP_MCU :
+						case QUIT :
+							next.main_state = FINALIZE;
+							break;
+						case HELP :
+							print_help_string();
+						default :
+							/* Both devices already connected */
+							next.main_state = GET_CMD;
+							break;
+					}
 					break;
-				case TESTRECV :
-					testRecv(context, efm_handle);
+				case CONNECTED_MCU :
+					switch (state->cmd) {
+						case MCU_TESTSEND :
+						case MCU_TESTSEND10 :
+						case MCU_TESTRECV :
+						case MCU_TESTRECV10 :
+						case MCU_TESTSENDRECV :
+						case QUIT :
+						case HELP :
+						default :
+							printf("FPGA not connected. Try 'connect fpga'.");
+							next.main_state = GET_CMD;
+							break;
+
+					}
 					break;
-				case TESTRECV10 :
-					receiveNMsgs(context, efm_handle, 10);
-					break;
-				case TESTSENDRECV :
-					sendRecvWait(context, efm_handle);
-					break;
-				case HELP :
-					printHelpString();
-					break;
-				case QUIT :
-					colorprint("Exiting...", YELLOW);
+				case CONNECTED_FPGA :
+					switch (state->cmd) {
+						case FPGA_TESTSEND :
+						case FPGA_TESTSEND10 :
+						case FPGA_TESTRECV :
+						case FPGA_TESTRECV10 :
+						case FPGA_TESTSENDRECV :
+						case QUIT :
+						case HELP :
+						default :
+							printf("MCU not connected. Try 'connect mcu'.");
+							next.main_state = GET_CMD;
+							break;
+					}
 					break;
 				default :
-					/* If unrecognized cmd, just quit. Should not happed */
-					cmd = QUIT;
-					colorprint("Exiting...", YELLOW);
+					next.main_state = GET_CMD;
 					break;
 			}
-		}
-		status = USB_FINALIZE;
+			break;
+		case CONNECTING :
+			switch (state->usb_state) {
+				case CONNECTED :
+				case CONNECTED_MCU :
+				case CONNECTED_FPGA :
+					next.main_state = GET_CMD;
+					break;
+				default :
+					/* TODO: Figure out reasonable default */
+					next.main_state = GET_CMD;
+					break;
+			}
+			break;
+		case RUNNING :
+			switch (state->cmd) {
+				case STOP :
+					next.main_state = STOPPING;
+					break;
+				default :
+					next.main_state = GET_CMD;
+			}
+			break;
+		case STOPPING :
+			/* Stop all USB transactions */
+		case TESTING :
+			/* Running some test */
+		default :
+			/* TODO: Figure out a reasonable default case */
+			next.main_state = GET_CMD;
 	}
-	//Release previously claimed interface
-	libusb_release_interface(efm_handle, interface);
-	//Close connection to device
-	libusb_close(efm_handle);
+	
+	/* Copy values back */
+	state->main_state = next.main_state;
+	state->usb_state = next.usb_state;
+	state->test = next.test;
+
+}
+
+void init_state(state_t* state) {
+	state->main_state = INIT;
+	state->usb_state = DISCONNECTED;
+	state->cmd = INVALID_CMD;
+	state->test = NO_TEST;
+}
+
+void finalize(state_t state, libusb_device_handle* mcu_handle, libusb_device_handle* fpga_handle, int mcu_interface, int fpga_interface) {
+
+	if (state.usb_state == CONNECTED) {
+		libusb_release_interface(mcu_handle, mcu_interface);
+		libusb_release_interface(fpga_handle, fpga_interface);
+		libusb_close(mcu_handle);
+		libusb_close(fpga_handle);
+	} else if (state.usb_state == CONNECTED_MCU) {
+		libusb_release_interface(mcu_handle, mcu_interface);
+		libusb_close(mcu_handle);
+	} else if (state.usb_state == CONNECTED_FPGA) {
+		libusb_release_interface(fpga_handle, fpga_interface);
+		libusb_close(fpga_handle);
+	}
+
+	/* TODO: Close any remaining open files and free remaining allocated memory */
 }
 
 /* 
@@ -197,14 +293,19 @@ void mainloop(libusb_context* context) {
 */
 
 int commandloop() {
-	int cmd = INVALID_CMD;
-	char stringBuffer[64];
+	cmd_t cmd = INVALID_CMD;
+	char stringBuffer[128]; //Unsafe, but who cares
 	memset(stringBuffer, 0, 64);
 
 
 	while (cmd == INVALID_CMD) {
 		printf(">>> ");
-		fgets(stringBuffer, 64, stdin);
+		fgets(stringBuffer, 128, stdin);
+
+		if (_kill) {
+			cmd = QUIT;
+			break;
+		}
 
 		for (int i = 0; stringBuffer[i]; i++) {
 			stringBuffer[i] = tolower(stringBuffer[i]);
@@ -212,33 +313,9 @@ int commandloop() {
 
 		stringBuffer[strcspn(stringBuffer, "\r\n")] = 0; //remove trailing newline
 
-		if (strcmp(stringBuffer, "testsend") == 0) {
-			cmd = TESTSEND;
-		} else if (strcmp(stringBuffer, "ts") == 0) {
-			cmd = TESTSEND;
-		} else if ((strcmp(stringBuffer, "testsend10") == 0)) {
-			cmd = TESTSEND10;
-		} else if ((strcmp(stringBuffer, "ts10") == 0)) {
-				cmd = TESTSEND10;
-		} else if (strcmp(stringBuffer, "testrecv") == 0) {
-			cmd = TESTRECV;
-		} else if (strcmp(stringBuffer, "tr") == 0) {
-			cmd = TESTRECV;
-		} else if (strcmp(stringBuffer, "testrecv10") == 0) {
-			cmd = TESTRECV10;
-		} else if (strcmp(stringBuffer, "tr10") == 0) {
-			cmd = TESTRECV10;
-		} else if (strcmp(stringBuffer, "testsendrecv") == 0) {
-			cmd = TESTSENDRECV;
-		} else if (strcmp(stringBuffer, "tsr") == 0) {
-			cmd = TESTSENDRECV;
-		} else if (strcmp(stringBuffer, "help") == 0) {
-			cmd = HELP;
-		} else if (strcmp(stringBuffer, "quit") == 0) {
-			cmd = QUIT;
-		} else  if (strcmp(stringBuffer, "exit") == 0) {
-			cmd = QUIT;
-		} else {
+		cmd = parse_cmd(stringBuffer);
+
+		if (cmd == INVALID_CMD) {
 			printf("Invalid command, try 'help'.\n");
 		}
 	}
@@ -246,180 +323,4 @@ int commandloop() {
 	return cmd;
 }
 
-/* Test function, sends 50 messages to USB device, and sets up continuous receives */
-void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int num_messages) {
-	memset(receiveBuffer, 0, 512);
 
-	for (int i = 0; i < num_messages; i++) {
-		debugprint("Attempting to send tick message to EFM32", BLUE);
-		if (pendingWrite) {
-			debugprint("Message already waiting in queue!", RED);
-		} else {
-			sendAsyncMessage(efm_handle, tickMessage, tickMessageLength);
-			debugprint("Message sent!", GREEN);
-		}
-
-		if (pendingReceive) {
-			debugprint("Still waiting for message!", RED);
-		} else {
-			debugprint("Setting up receive...", GREEN);
-			memset(receiveBuffer, 0, 512);
-			receiveAsyncMessage(efm_handle, receiveBuffer);
-		}
-
-		printf("receiveBuffer = %s\n", receiveBuffer);
-
-		libusb_handle_events(context);
-		usleep(500000);
-	}
-}
-
-void sendTick(libusb_context* context, libusb_device_handle* efm_handle) {
-	while (1) {
-		if (!pendingWrite) {
-			sendAsyncMessage(efm_handle, tickMessage, tickMessageLength);
-			break;
-		}
-	}
-
-	while (pendingWrite) {
-		libusb_handle_events(context);
-	}
-}
-
-void sendNTicks(libusb_context* context, libusb_device_handle* efm_handle, int num_ticks) {
-	for (int i = 0; i < num_ticks; i++) {
-		while (1) {
-			if (!pendingWrite) {
-				sendAsyncMessage(efm_handle, tickMessage, tickMessageLength);
-				break;
-			}
-		}
-
-		while (pendingWrite) {
-			libusb_handle_events(context);
-		}
-	}
-}
-
-void testRecv(libusb_context* context, libusb_device_handle* efm_handle) {
-	while(1) {
-		if (!pendingReceive) {
-			memset(receiveBuffer, 0, 512);
-			receiveAsyncMessage(efm_handle, receiveBuffer);
-			break;
-		}
-	}
-
-	while(pendingReceive) {
-		libusb_handle_events(context);
-	}
-
-	printf("Received message: %s\n", receiveBuffer);
-}
-
-/* Test function : send 1 message, recv 1 message */
-
-void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle) {
-	debugprint("Attempting to send tick message to Ytelse MCU", BLUE);
-	while (1) {
-		if (!pendingWrite) {
-			sendAsyncMessage(efm_handle, tickMessage, tickMessageLength);
-			break;
-		}
-	}
-	debugprint("Message sent!", GREEN);
-	while (1) {
-		if (!pendingReceive) {
-			memset(receiveBuffer, 0, 512);
-			receiveAsyncMessage(efm_handle, receiveBuffer);
-			break;
-		}
-	}
-
-	while (pendingReceive) {
-		libusb_handle_events(context);
-	}
-
-	printf("Received message: %s\n", receiveBuffer);
-}
-
-void receiveNMsgs(libusb_context* context, libusb_device_handle* efm_handle, int num_recvs) {
-
-	for (int i = 0; i < num_recvs; i++) {
-		while (1) {
-			if (!pendingReceive) {
-				memset(receiveBuffer, 0, 512);
-				receiveAsyncMessage(efm_handle, receiveBuffer);
-				break;
-			}
-		}
-		while (pendingReceive) {
-			libusb_handle_events(context);
-		}
-		printf("Received message: %s\n", receiveBuffer);
-	}
-}
-
-/* Print convenience functions */
-
-void printStartupMsg(void) {
-
-	printf("\n\n");
-	printf("*************************************************************************\n");
-	printf("*                                                                       *\n");
-	printf("*"ANSI_COLOR_RED"    $$$$$$$\\   $$$$$$\\   $$$$$$\\  $$\\      $$\\  $$$$$$\\  $$\\   $$\\     "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_RED"    $$  __$$\\ $$  __$$\\ $$  __$$\\ $$$\\    $$$ |$$  __$$\\ $$$\\  $$ |    "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_RED"    $$ |  $$ |$$ /  $$ |$$ /  \\__|$$$$\\  $$$$ |$$ /  $$ |$$$$\\ $$ |    "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_RED"    $$$$$$$  |$$$$$$$$ |$$ |      $$\\$$\\$$ $$ |$$$$$$$$ |$$ $$\\$$ |    "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_RED"    $$  ____/ $$  __$$ |$$ |      $$ \\$$$  $$ |$$  __$$ |$$ \\$$$$ |    "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_RED"    $$ |      $$ |  $$ |$$ |  $$\\ $$ |\\$  /$$ |$$ |  $$ |$$ |\\$$$ |    "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_RED"    $$ |      $$ |  $$ |\\$$$$$$  |$$ | \\_/ $$ |$$ |  $$ |$$ | \\$$ |    "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_RED"    \\__|      \\__|  \\__| \\______/ \\__|     \\__|\\__|  \\__|\\__|  \\__|    "ANSI_COLOR_RESET"*\n");
-	printf("*                                                                       *\n");
-	printf("*"ANSI_COLOR_GREEN"                     __  _________    __ __         __                "ANSI_COLOR_RESET" *\n");
-	printf("*"ANSI_COLOR_GREEN"                    / / / / __/ _ )  / // /__  ___ / /_               "ANSI_COLOR_RESET" *\n");
-	printf("*"ANSI_COLOR_GREEN"                   / /_/ /\\ \\/ _  | / _  / _ \\(_-</ __/               "ANSI_COLOR_RESET" *\n");
-	printf("*"ANSI_COLOR_GREEN"                   \\____/___/____/ /_//_/\\___/___/\\__/                "ANSI_COLOR_RESET" *\n");
-	printf("*                                                                       *\n");
-	printf("*"ANSI_COLOR_YELLOW"                   *** PAC MAN ***                                     "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"               *PACMANPACMANPACMANPAC*                                 "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"           *MANPACMANPACMANPACMANPACMANPA*                             "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"        *CMANPACMANPACMANPACMANPACMANPACMANP*                          "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"      *ACMANPACMANPACMANPACMANPACMANPACMANPACM*                        "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"    *ANPACMANPACMANPACMANPACMANPACMANPACMA*                            "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"   *NPACMANPACMANPACMANPACMANPACMANPACM*                               "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"  *ANPACMANPACMANPACMANPACMANPACMAN*                                   "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW" *PACMANPACMANPACMANPACMANPACM*                                        "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW" *ANPACMANPACMANPACMANPACM*                DIG           DIG           "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW" *ANPACMANPACMANPACMANP*                  DIGIT         DIGIT          "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW" *ACMANPACMANPACMANPACMANP*                IT*           IT*           "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW" *ACMANPACMANPACMANPACMANPACMA*                                        "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"  *NPACMANPACMANPACMANPACMANPACMANP*                                   "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"   *ACMANPACMANPACMANPACMANPACMANPACMAN*                               "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"    *PACMANPACMANPACMANPACMANPACMANPACMANP*                            "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"      *ACMANPACMANPACMANPACMANPACMANPACMANPACM*                        "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"        *ANPACMANPACMANPACMANPACMANPACMANPAC*                          "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"           *MANPACMANPACMANPACMANPACMANPA*                             "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"               *CMANPACMANPACMANPACMA*                                 "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"                   *** PAC MAN ***                                     "ANSI_COLOR_RESET"*\n");
-	printf("*"ANSI_COLOR_YELLOW"                                                                       "ANSI_COLOR_RESET"*\n");
-	printf("*************************************************************************\n");
-	#ifdef DEBUG
-	printf("*                                DEBUG MODE                             *\n");
-	printf("*************************************************************************\n");
-	#endif                                    
-}	
-
-void printHelpString(void) {
-	printf("\n");
-	colorprint("Available commands: ", MAGENTA);
-	printf("testsend, ts        --  Send 1 message to MCU\n");
-	printf("testrecv, tr        --  Set up receive of 1 message from MCU\n");
-	printf("testsend10, ts10    --  Send 10 messages to MCU\n");
-	printf("testrecv10, tr10    --  Set up receive of 10 messages from MCU\n");
-	printf("testsendrecv, tsr   --  Send and set up receive of 1 message to/from MCU\n");
-	printf("quit, exit          --  Quit the program\n");
-	printf("help                --  Print list of available commands\n");
-	printf("\n");
-}
