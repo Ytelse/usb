@@ -1,6 +1,10 @@
 #include "cmd_parser.h"
 #include "debug.h"
 
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
 cmd_t parse_cmd(char* string) {
 	cmd_t cmd = INVALID_CMD;	
 
@@ -37,6 +41,14 @@ cmd_t parse_cmd(char* string) {
 	// }
 
 	return cmd;
+}
+
+/* Get the number of messages from space separated string input */
+int splitOnSpaceGetLast(char* stringBuffer) {
+	strsep((char**)&stringBuffer, " ");
+	char* token = strsep((char**)&stringBuffer, " ");
+	int number = atoi(token);
+	return number;
 }
 
 void print_help_string(void) {

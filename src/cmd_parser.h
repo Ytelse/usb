@@ -16,6 +16,7 @@ typedef enum commands {
 	HELP, 				/* Print available commands */
 	QUIT,				/* Quit the program */
 	/* Test commands */
+	TESTSEND_N,
 	MCU_TESTSEND,		/* Send 1 message to MCU */
 	FPGA_TESTSEND,		/* Send 1 message to FPGA */
 	MCU_TESTSEND10,     /* Send 10 messages to MCU */
@@ -30,6 +31,9 @@ typedef enum commands {
 
 
 cmd_t parse_cmd(char* string);
+
+/* Get the number of messages from space separated string input */
+int splitOnSpaceGetLast(char* stringBuffer);
 
 /* Print list of available commands */
 void print_help_string(void);

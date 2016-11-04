@@ -10,6 +10,9 @@
 #include <ctype.h>
 #include <signal.h>
 
+/* TODO: Rework this implementation? */
+static int number_of_messages_to_send = 0;
+
 /* enum for main loop flow control */
 typedef enum MainloopState {
 	/* Overall */
@@ -34,6 +37,8 @@ typedef enum USBState {
 } usb_state_t;
 
 typedef enum Tests {
+	/* General tests */
+	TESTSEND_N_TEST,
 	/* MCU tests, add more as needed */
 	MCU_TESTSEND_TEST,
 	MCU_TESTSEND10_TEST,
@@ -171,7 +176,7 @@ void next_state(state_t* state) {
 					break;
 				case CONNECTED :
 					switch (state->cmd) {
-						case MCU_TESTSEND :
+						/* TODO: Add all appropriate cases */
 						case RUN :
 						case RUN_FPGA :
 						case RUN_MCU :
@@ -190,6 +195,8 @@ void next_state(state_t* state) {
 					break;
 				case CONNECTED_MCU :
 					switch (state->cmd) {
+						/* TODO: Add all appropriate cases */
+						case TESTSEND_N:
 						case MCU_TESTSEND :
 						case MCU_TESTSEND10 :
 						case MCU_TESTRECV :
@@ -201,7 +208,6 @@ void next_state(state_t* state) {
 							printf("FPGA not connected. Try 'connect fpga'.");
 							next.main_state = GET_CMD;
 							break;
-
 					}
 					break;
 				case CONNECTED_FPGA :
@@ -322,5 +328,3 @@ int commandloop() {
 
 	return cmd;
 }
-
-
