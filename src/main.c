@@ -366,29 +366,101 @@ void receiveNMsgs(libusb_context* context, libusb_device_handle* efm_handle, int
 void printStartupMsg(void) {
 
 	printf("\n\n");
-	printf("***********************************************************************\n");
-	printf("*                                                                     *\n");
-	printf("*    $$\\     $$\\ $$$$$$$$\\ $$$$$$$$\\ $$\\       $$$$$$\\  $$$$$$$$\\     *\n");
-	printf("*    \\$$\\   $$  |\\__$$  __|$$  _____|$$ |     $$  __$$\\ $$  _____|    *\n");
-	printf("*     \\$$\\ $$  /    $$ |   $$ |      $$ |     $$ /  \\__|$$ |          *\n");
-	printf("*      \\$$$$  /     $$ |   $$$$$\\    $$ |     \\$$$$$$\\  $$$$$\\        *\n");
-	printf("*       \\$$  /      $$ |   $$  __|   $$ |      \\____$$\\ $$  __|       *\n");
-	printf("*        $$ |       $$ |   $$ |      $$ |     $$\\   $$ |$$ |          *\n");
-	printf("*        $$ |       $$ |   $$$$$$$$\\ $$$$$$$$\\ $$$$$$  |$$$$$$$$\\     *\n");
-	printf("*        \\__|       \\__|   \\________|\\________|\\______/ \\________|    *\n");
-	printf("*                                                                     *\n");
-	printf("*                    __  _________    __ __         __                *\n");
-	printf("*                   / / / / __/ _ )  / // /__  ___ / /_               *\n");
-	printf("*                  / /_/ /\\ \\/ _  | / _  / _ \\(_-</ __/               *\n");
-	printf("*                  \\____/___/____/ /_//_/\\___/___/\\__/                *\n");
-	printf("*                                                                     *\n");
-	printf("***********************************************************************\n");
+	printf("*************************************************************************\n");
+	printf("*                                                                       *\n");
+	printf("*"ANSI_COLOR_RED"    $$$$$$$\\   $$$$$$\\   $$$$$$\\  $$\\      $$\\  $$$$$$\\  $$\\   $$\\     "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_RED"    $$  __$$\\ $$  __$$\\ $$  __$$\\ $$$\\    $$$ |$$  __$$\\ $$$\\  $$ |    "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_RED"    $$ |  $$ |$$ /  $$ |$$ /  \\__|$$$$\\  $$$$ |$$ /  $$ |$$$$\\ $$ |    "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_RED"    $$$$$$$  |$$$$$$$$ |$$ |      $$\\$$\\$$ $$ |$$$$$$$$ |$$ $$\\$$ |    "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_RED"    $$  ____/ $$  __$$ |$$ |      $$ \\$$$  $$ |$$  __$$ |$$ \\$$$$ |    "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_RED"    $$ |      $$ |  $$ |$$ |  $$\\ $$ |\\$  /$$ |$$ |  $$ |$$ |\\$$$ |    "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_RED"    $$ |      $$ |  $$ |\\$$$$$$  |$$ | \\_/ $$ |$$ |  $$ |$$ | \\$$ |    "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_RED"    \\__|      \\__|  \\__| \\______/ \\__|     \\__|\\__|  \\__|\\__|  \\__|    "ANSI_COLOR_RESET"*\n");
+	printf("*                                                                       *\n");
+	printf("*"ANSI_COLOR_GREEN"                     __  _________    __ __         __                "ANSI_COLOR_RESET" *\n");
+	printf("*"ANSI_COLOR_GREEN"                    / / / / __/ _ )  / // /__  ___ / /_               "ANSI_COLOR_RESET" *\n");
+	printf("*"ANSI_COLOR_GREEN"                   / /_/ /\\ \\/ _  | / _  / _ \\(_-</ __/               "ANSI_COLOR_RESET" *\n");
+	printf("*"ANSI_COLOR_GREEN"                   \\____/___/____/ /_//_/\\___/___/\\__/                "ANSI_COLOR_RESET" *\n");
+	printf("*                                                                       *\n");
+	printf("*"ANSI_COLOR_YELLOW"                   *** PAC MAN ***                                     "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"               *PACMANPACMANPACMANPAC*                                 "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"           *MANPACMANPACMANPACMANPACMANPA*                             "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"        *CMANPACMANPACMANPACMANPACMANPACMANP*                          "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"      *ACMANPACMANPACMANPACMANPACMANPACMANPACM*                        "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"    *ANPACMANPACMANPACMANPACMANPACMANPACMA*                            "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"   *NPACMANPACMANPACMANPACMANPACMANPACM*                               "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"  *ANPACMANPACMANPACMANPACMANPACMAN*                                   "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW" *PACMANPACMANPACMANPACMANPACM*                                        "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW" *ANPACMANPACMANPACMANPACM*                DIG           DIG           "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW" *ANPACMANPACMANPACMANP*                  DIGIT         DIGIT          "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW" *ACMANPACMANPACMANPACMANP*                IT*           IT*           "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW" *ACMANPACMANPACMANPACMANPACMA*                                        "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"  *NPACMANPACMANPACMANPACMANPACMANP*                                   "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"   *ACMANPACMANPACMANPACMANPACMANPACMAN*                               "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"    *PACMANPACMANPACMANPACMANPACMANPACMANP*                            "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"      *ACMANPACMANPACMANPACMANPACMANPACMANPACM*                        "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"        *ANPACMANPACMANPACMANPACMANPACMANPAC*                          "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"           *MANPACMANPACMANPACMANPACMANPA*                             "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"               *CMANPACMANPACMANPACMA*                                 "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"                   *** PAC MAN ***                                     "ANSI_COLOR_RESET"*\n");
+	printf("*"ANSI_COLOR_YELLOW"                                                                       "ANSI_COLOR_RESET"*\n");
+	printf("*************************************************************************\n");
 	#ifdef DEBUG
-	printf("*                                DEBUG MODE                           *\n");
-	printf("***********************************************************************\n");
+	printf("*                                DEBUG MODE                             *\n");
+	printf("*************************************************************************\n");
 	#endif                                    
 
-}
+/***************************************************************************
+ *                                                                         *
+ *                             ........
+ *                        PACMANPACMANPACMAN
+ *                    PACMANPACMANPACMANPACMANPAC
+ *                MANPACMANPACMANPACMANPACMANPACMANPAC
+ *            MANPACMANPACMANPACMANPACMANPACMANPACMANPACMA
+ *         NPACMANPACMANPACMANPACMANPACMANPACMANPACMAN
+ *      PACMANPACMANPACMANPACMANPACMANPACMANPACMAN
+ *     PACMANPACMANPACMANPACMANPACMANPACMANPAC
+ *   MANPACMANPACMANPACMANPACMANPACMANPACM
+ *  ANPACMANPACMANPACMANPACMANPACMANPA
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ *
+ */
+
+/*
+ *                   *** PAC MAN *** -
+ *               *PACMANPACMANPACMANPAC* -
+ *           *MANPACMANPACMANPACMANPACMANPA* -
+ *        *CMANPACMANPACMANPACMANPACMANPACMANP* -
+ *      *ACMANPACMANPACMANPACMANPACMANPACMANPACM* -
+ *    *ANPACMANPACMANPACMANPACMANPACMANPACMA* -       
+ *   *NPACMANPACMANPACMANPACMANPACMANPACM* -           
+ *  *ANPACMANPACMANPACMANPACMANPACMAN*  -             
+ * *PACMANPACMANPACMANPACMANPACM*    -                   
+ * *ANPACMANPACMANPACMANPACM*      -                       
+ * *ANPACMANPACMANPACMANP*     -                        
+ * *ACMANPACMANPACMANPACMANP*      -                        
+ * *ACMANPACMANPACMANPACMANPACMA*   -                      
+ *  *NPACMANPACMANPACMANPACMANPACMANP*   -                
+ *   *ACMANPACMANPACMANPACMANPACMANPACMAN* -              
+ *    *PACMANPACMANPACMANPACMANPACMANPACMANP* -             
+ *      *ACMANPACMANPACMANPACMANPACMANPACMANPACM* -  
+ *        *ANPACMANPACMANPACMANPACMANPACMANPAC* -
+ *           *MANPACMANPACMANPACMANPACMANPA* -
+ *               *CMANPACMANPACMANPACMA* -
+ *                   *** PAC MAN *** -
+ *
+ */
+}	
 
 void printHelpString(void) {
 	printf("\n");
