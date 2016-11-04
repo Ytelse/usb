@@ -409,57 +409,6 @@ void printStartupMsg(void) {
 	printf("*                                DEBUG MODE                             *\n");
 	printf("*************************************************************************\n");
 	#endif                                    
-
-/***************************************************************************
- *                                                                         *
- *                             ........
- *                        PACMANPACMANPACMAN
- *                    PACMANPACMANPACMANPACMANPAC
- *                MANPACMANPACMANPACMANPACMANPACMANPAC
- *            MANPACMANPACMANPACMANPACMANPACMANPACMANPACMA
- *         NPACMANPACMANPACMANPACMANPACMANPACMANPACMAN
- *      PACMANPACMANPACMANPACMANPACMANPACMANPACMAN
- *     PACMANPACMANPACMANPACMANPACMANPACMANPAC
- *   MANPACMANPACMANPACMANPACMANPACMANPACM
- *  ANPACMANPACMANPACMANPACMANPACMANPA
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- *
- */
-
-/*
- *                   *** PAC MAN *** -
- *               *PACMANPACMANPACMANPAC* -
- *           *MANPACMANPACMANPACMANPACMANPA* -
- *        *CMANPACMANPACMANPACMANPACMANPACMANP* -
- *      *ACMANPACMANPACMANPACMANPACMANPACMANPACM* -
- *    *ANPACMANPACMANPACMANPACMANPACMANPACMA* -       
- *   *NPACMANPACMANPACMANPACMANPACMANPACM* -           
- *  *ANPACMANPACMANPACMANPACMANPACMAN*  -             
- * *PACMANPACMANPACMANPACMANPACM*    -                   
- * *ANPACMANPACMANPACMANPACM*      -                       
- * *ANPACMANPACMANPACMANP*     -                        
- * *ACMANPACMANPACMANPACMANP*      -                        
- * *ACMANPACMANPACMANPACMANPACMA*   -                      
- *  *NPACMANPACMANPACMANPACMANPACMANP*   -                
- *   *ACMANPACMANPACMANPACMANPACMANPACMAN* -              
- *    *PACMANPACMANPACMANPACMANPACMANPACMANP* -             
- *      *ACMANPACMANPACMANPACMANPACMANPACMANPACM* -  
- *        *ANPACMANPACMANPACMANPACMANPACMANPAC* -
- *           *MANPACMANPACMANPACMANPACMANPA* -
- *               *CMANPACMANPACMANPACMA* -
- *                   *** PAC MAN *** -
- *
- */
 }	
 
 void printHelpString(void) {
