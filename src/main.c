@@ -39,6 +39,7 @@ enum state {
 enum commands {
 	INVALID_CMD, 	/* No command selected */
 	TESTSEND,		/* Send 1 message to MCU */
+	TESTSEND10,             /* Send 10 messages to MCU */
 	TESTRECV,		/* Set up receive of 1 message from MCU */
 	TESTRECV10, 	/* Set up receive of 10 messages from MCU */
 	TESTSENDRECV,	/* Send and set up receive of 1 message to/from MCU */
@@ -56,6 +57,7 @@ void testRecv(libusb_context* context, libusb_device_handle* efm_handle);
 void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int num_messages);
 void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle);
 void receiveNMsgs(libusb_context* context, libusb_device_handle* efm_handle, int num_recvs);
+void sendNTicks(libusb_context* context, libusb_device_handle* efm_handle, int num_ticks);
 
 
 /* Print helpers */
@@ -156,6 +158,9 @@ void mainloop(libusb_context* context) {
 				case TESTSEND :
 					sendTick(context, efm_handle);
 					break;
+				case TESTSEND10:
+					sendNTicks(context, efm_handle, 10);
+					break;
 				case TESTRECV :
 					testRecv(context, efm_handle);
 					break;
@@ -211,6 +216,10 @@ int commandloop() {
 			cmd = TESTSEND;
 		} else if (strcmp(stringBuffer, "ts") == 0) {
 			cmd = TESTSEND;
+		} else if ((strcmp(stringBuffer, "testsend10") == 0)) {
+			cmd = TESTSEND10;
+		} else if ((strcmp(stringBuffer, "ts10") == 0)) {
+				cmd = TESTSEND10;
 		} else if (strcmp(stringBuffer, "testrecv") == 0) {
 			cmd = TESTRECV;
 		} else if (strcmp(stringBuffer, "tr") == 0) {
@@ -275,6 +284,21 @@ void sendTick(libusb_context* context, libusb_device_handle* efm_handle) {
 
 	while (pendingWrite) {
 		libusb_handle_events(context);
+	}
+}
+
+void sendNTicks(libusb_context* context, libusb_device_handle* efm_handle, int num_ticks) {
+	for (int i = 0; i < num_ticks; i++) {
+		while (1) {
+			if (!pendingWrite) {
+				sendAsyncMessage(efm_handle, tickMessage, tickMessageLength);
+				break;
+			}
+		}
+
+		while (pendingWrite) {
+			libusb_handle_events(context);
+		}
 	}
 }
 
@@ -365,6 +389,7 @@ void printHelpString(void) {
 	colorprint("Available commands: ", MAGENTA);
 	printf("testsend, ts        --  Send 1 message to MCU\n");
 	printf("testrecv, tr        --  Set up receive of 1 message from MCU\n");
+	printf("testsend10, ts10    --  Send 10 messages to MCU\n");
 	printf("testrecv10, tr10    --  Set up receive of 10 messages from MCU\n");
 	printf("testsendrecv, tsr   --  Send and set up receive of 1 message to/from MCU\n");
 	printf("quit, exit          --  Quit the program\n");
