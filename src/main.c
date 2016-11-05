@@ -38,13 +38,9 @@ typedef enum USBState {
 
 typedef enum Tests {
 	/* MCU tests, add more as needed */
-	MCU_SEND_N_TEST,
-	MCU_RECV_TEST,
-	MCU_SENDRECV_TEST,
-	/* FPGA tests, currently just placeholders */
-	FPGA_SEND_N_TEST,
-	FPGA_RECV_TEST,
-	FPGA_SENDRECV_TEST,
+	SEND_TEST,
+	RECV_TEST,
+	SENDRECV_TEST,
 	/* Initial value */
 	NO_TEST
 } test_t;
@@ -52,7 +48,7 @@ typedef enum Tests {
 typedef struct State {
 	main_state_t main_state; /* State of mainloop */
 	usb_state_t usb_state;
-	cmd_t cmd;
+	ytelse_command_t cmd;
 	test_t test;
 } state_t;
 
@@ -69,7 +65,7 @@ void mainloop(libusb_context* context);
 void next_state(state_t* state);
 void init_state(state_t* state);
 void finalize(state_t state, libusb_device_handle* mcu_handle, libusb_device_handle* fpga_handle, int mcu_interface, int fpga_interface);
-int commandloop(void);
+ytelse_command_t commandloop(void);
 
 int main(void) {
 
@@ -140,7 +136,7 @@ void mainloop(libusb_context* context) {
 				}
 			case TESTING :
 				switch (state.test) {
-					case MCU_SEND_N_TEST : /* etc */
+					case SEND_TEST : /* etc */
 					default :
 						state.test = NO_TEST;
 						break;
@@ -153,7 +149,7 @@ void mainloop(libusb_context* context) {
 				break;
 		}
 
-		if (_kill || state.cmd == QUIT) {
+		if (_kill || state.cmd.command == QUIT) {
 			state.main_state = FINALIZE;
 		}
 	}
@@ -178,18 +174,23 @@ void next_state(state_t* state) {
 		case GET_CMD :
 			switch (state->usb_state) {
 				case DISCONNECTED :
-					switch (state->cmd) {
+					switch (state->cmd.command) {
 						case CONNECT :
 							next.main_state = CONNECTING;
-							next.usb_state = CONNECTING_ALL;
-							break;
-						case CONNECT_MCU :
-							next.main_state = CONNECTING;
-							next.usb_state = CONNECTING_MCU;
-							break;
-						case CONNECT_FPGA :
-							next.main_state = CONNECTING;
-							next.usb_state = CONNECTING_FPGA;
+							switch (state->cmd.target) {
+								case YTELSE_BOTH_DEVICES :
+									next.usb_state = CONNECTING_ALL;
+									break;
+								case YTELSE_FPGA_DEVICE :
+									next.usb_state = CONNECTING_FPGA;
+									break;
+								case YTELSE_MCU_DEVICE :
+									next.usb_state = CONNECTING_MCU;
+									break;
+								default :
+									next.usb_state = DISCONNECTED;
+
+							}
 							break;
 						case QUIT :
 							next.main_state = FINALIZE;
@@ -205,13 +206,11 @@ void next_state(state_t* state) {
 					}
 					break;
 				case CONNECTED :
-					switch (state->cmd) {
+					switch (state->cmd.command) {
 						/* TODO: Add all appropriate cases */
 						case RUN :
-						case RUN_FPGA :
-						case RUN_MCU :
-						case STOP_FPGA :
-						case STOP_MCU :
+						case STOP :
+						case CONNECT : /* In case connect to 1 device and want to connect other */
 						case QUIT :
 							next.main_state = FINALIZE;
 							break;
@@ -224,28 +223,26 @@ void next_state(state_t* state) {
 					}
 					break;
 				case CONNECTED_MCU :
-					switch (state->cmd) {
+					switch (state->cmd.command) {
 						/* TODO: Add all appropriate cases */
-						case MCU_TESTSEND_N :
-						case MCU_TESTRECV :
-						case MCU_TESTSENDRECV :
+						case TESTSEND :
+						case TESTRECV :
+						case TESTSENDRECV :
 						case QUIT :
 						case HELP :
 						default :
-							printf("FPGA not connected. Try 'connect fpga'.");
 							next.main_state = GET_CMD;
 							break;
 					}
 					break;
 				case CONNECTED_FPGA :
-					switch (state->cmd) {
-						case FPGA_TESTSEND_N:
-						case FPGA_TESTRECV :
-						case FPGA_TESTSENDRECV :
+					switch (state->cmd.command) {
+						case TESTSEND :
+						case TESTRECV :
+						case TESTSENDRECV :
 						case QUIT :
 						case HELP :
 						default :
-							printf("MCU not connected. Try 'connect mcu'.");
 							next.main_state = GET_CMD;
 							break;
 					}
@@ -270,7 +267,7 @@ void next_state(state_t* state) {
 			next.main_state = GET_CMD;
 			break;
 		case RUNNING :
-			switch (state->cmd) {
+			switch (state->cmd.command) {
 				case STOP :
 					next.main_state = STOPPING;
 					break;
@@ -298,7 +295,9 @@ void next_state(state_t* state) {
 void init_state(state_t* state) {
 	state->main_state = INIT;
 	state->usb_state = DISCONNECTED;
-	state->cmd = INVALID_CMD;
+	state->cmd.command = INVALID_CMD;
+	state->cmd.target = YTELSE_NO_DEVICE;
+	state->cmd.N = -1;
 	state->test = NO_TEST;
 }
 
@@ -325,18 +324,21 @@ void finalize(state_t state, libusb_device_handle* mcu_handle, libusb_device_han
 	program interactive. Just add commands as they are implemented.
 */
 
-int commandloop() {
-	cmd_t cmd = INVALID_CMD;
+ytelse_command_t commandloop() {
+	ytelse_command_t cmd;
+	cmd.command = INVALID_CMD;
+	cmd.target = YTELSE_NO_DEVICE;
+	cmd.N = -1;
 	char stringBuffer[128]; //Unsafe, but who cares
 	memset(stringBuffer, 0, 64);
 
 
-	while (cmd == INVALID_CMD) {
+	while (cmd.command == INVALID_CMD) {
 		printf(">>> ");
 		fgets(stringBuffer, 128, stdin);
 
 		if (_kill) {
-			cmd = QUIT;
+			cmd.command = QUIT;
 			break;
 		}
 
@@ -348,7 +350,7 @@ int commandloop() {
 
 		cmd = parse_cmd(stringBuffer);
 
-		if (cmd == INVALID_CMD) {
+		if (cmd.command == INVALID_CMD) {
 			printf("Invalid command, try 'help'.\n");
 		}
 	}
