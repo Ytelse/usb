@@ -17,6 +17,9 @@
 /* Number of attempts before giving up trying to connect to device */
 #define ATTEMPT_LIMIT 10
 
+/* _kill signal for use within while/for loops when connecting */
+extern sig_atomic_t _kill;
+
 typedef enum ConnectionState {
 	USB_DEVICE_CONNECTED,				/* USB device has connected */
 	USB_DEVICE_DISCONNECTED,			/* USB device has disconnected */
@@ -61,6 +64,10 @@ int connect(libusb_context* context, libusb_device_handle** dev_handle, ytelse_d
 		} else {
 			state = USB_DEVICE_FOUND;
 		}
+
+		if (_kill) {
+			break;
+		}
 	}
 
 	/* If device is not found, return failure */
@@ -97,6 +104,10 @@ int connect(libusb_context* context, libusb_device_handle** dev_handle, ytelse_d
 			break;
 		} else {
 			state = USB_DEVICE_INTERFACE_CLAIMED;
+		}
+
+		if (_kill) {
+			break;
 		}
 	}
 
@@ -146,17 +157,21 @@ int get_ytelse_mcu_handle(libusb_context* context, libusb_device_handle** dev_ha
 			efm_dev = device;
 		}
 
+		if (_kill) {
+			break;
+		}
+
 	}
 
 	if (!efm_dev) {
-		debugprint("Could not find Ytelse USB device.", RED);
+		debugprint("Could not find PACMAN MCU USB device.", RED);
 		return YTELSE_DEVICE_NOT_FOUND;
 	}
 	
 	rc = libusb_open(efm_dev, dev_handle);
 	if (rc) {
 		libusb_free_device_list(device_list, 1);
-		debugprint("Failed to open Ytelse USB device!", RED);
+		debugprint("Failed to open PACMAN MCU USB device!", RED);
 		return YTELSE_DEVICE_USB_OPEN_FAILURE;
 	}
 
