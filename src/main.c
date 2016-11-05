@@ -10,9 +10,6 @@
 #include <ctype.h>
 #include <signal.h>
 
-/* TODO: Rework this implementation? */
-static int number_of_messages_to_send = 0;
-
 /* enum for main loop flow control */
 typedef enum MainloopState {
 	/* Overall */
@@ -229,7 +226,10 @@ void next_state(state_t* state) {
 						case TESTRECV :
 						case TESTSENDRECV :
 						case QUIT :
+							next.main_state = FINALIZE;
+							break;
 						case HELP :
+							print_help_string();
 						default :
 							next.main_state = GET_CMD;
 							break;
@@ -241,7 +241,10 @@ void next_state(state_t* state) {
 						case TESTRECV :
 						case TESTSENDRECV :
 						case QUIT :
+							next.main_state = FINALIZE;
+							break;
 						case HELP :
+							print_help_string();
 						default :
 							next.main_state = GET_CMD;
 							break;
@@ -329,9 +332,9 @@ ytelse_command_t commandloop() {
 	cmd.command = INVALID_CMD;
 	cmd.target = YTELSE_NO_DEVICE;
 	cmd.N = -1;
+
 	char stringBuffer[128]; //Unsafe, but who cares
 	memset(stringBuffer, 0, 64);
-
 
 	while (cmd.command == INVALID_CMD) {
 		printf(">>> ");

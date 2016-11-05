@@ -166,5 +166,6 @@ int get_ytelse_mcu_handle(libusb_context* context, libusb_device_handle** dev_ha
 
 int get_ytelse_fpga_handle(libusb_context* context, libusb_device_handle** dev_handle) {
 	/* PLACEHOLDE */
+	colorprint("ERROR: Not yet supported!", RED);
 	return YTELSE_DEVICE_NOT_FOUND;
 }
