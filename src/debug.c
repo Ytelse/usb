@@ -54,7 +54,7 @@ void colorprint(char* string, int color) {
 	}
 }
 
-void printStartupMsg(void) {
+void print_startup_msg(void) {
 
 	printf("\n\n");
 	printf("*************************************************************************\n");
@@ -101,16 +101,16 @@ void printStartupMsg(void) {
 	printf("*************************************************************************\n");
 	#endif                                    
 }
-
-void printHelpString(void) {
+void print_help_string(void) {
 	printf("\n");
 	colorprint("Available commands: ", MAGENTA);
-	printf("testsend, ts        --  Send 1 message to MCU\n");
-	printf("testrecv, tr        --  Set up receive of 1 message from MCU\n");
-	printf("testsend10, ts10    --  Send 10 messages to MCU\n");
-	printf("testrecv10, tr10    --  Set up receive of 10 messages from MCU\n");
-	printf("testsendrecv, tsr   --  Send and set up receive of 1 message to/from MCU\n");
-	printf("quit, exit          --  Quit the program\n");
-	printf("help                --  Print list of available commands\n");
+	printf("connect [mcu|fpga]       --  Connect to <device>, defaults to both devices.\n");
+	printf("run [mcu|fpga]           --  Start normal transfers to <device>, defaults to both devices.\n");
+	printf("stop [mcu|fgpa]          --  Stop all transactions with <device>, defaults to both devices.\n");
+	printf("send <mcu|fpga> [n]      --  Send N message to <device>, defaults to 1.\n");
+	printf("recv <mcu|fgpa> [n]      --  Set up receive of N message from <device>, defaults to 1.\n");
+	printf("sendrecv <mcu|fpga> [n]  --  Send and set up receive of N message to/from <device>, defaults to 1.\n");
+	printf("quit, exit               --  Quit the program\n");
+	printf("help                     --  Print list of available commands\n");
 	printf("\n");
 }

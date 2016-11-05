@@ -10,6 +10,7 @@ typedef enum commands {
 	RUN,				/* Run full program specified by device */
 	STOP,				/* Stop whatever transactions are going on between host and given device */
 	HELP, 				/* Print available commands */
+	ART,				/* Print startup image */
 	QUIT,				/* Quit the program */
 	/* Test commands */
 	TESTSEND,		/* Send N messages to specified device */
@@ -23,14 +24,7 @@ typedef struct Command {
 	int N;
 } ytelse_command_t;
 
-
 ytelse_command_t parse_cmd(char* string);
-
-/* Get the number of messages from space separated string input */
-// int splitOnSpaceGetLast(char* stringBuffer);
-
-/* Print list of available commands */
-void print_help_string(void);
 
 
 #endif /* __CMD_PARSE_H_ */

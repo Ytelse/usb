@@ -69,7 +69,7 @@ int main(void) {
 	/* Handle ctrl-c gracefully */
 	signal(SIGINT, inthand);
 
-	printStartupMsg();
+	print_startup_msg();
 
 	libusb_context* context = NULL;
 	int rc = 0;
@@ -191,6 +191,10 @@ void next_state(state_t* state) {
 							break;
 						case QUIT :
 							next.main_state = FINALIZE;
+							break;
+						case ART:
+							next.main_state = GET_CMD;
+							print_startup_msg();
 							break;
 						case HELP :
 							next.main_state = GET_CMD;

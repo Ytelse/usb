@@ -45,19 +45,6 @@ void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int
 	}
 }
 
-void sendTick(libusb_context* context, libusb_device_handle* dev_handle) {
-	while (1) {
-		if (!pendingWrite) {
-			sendAsyncMessage(dev_handle, tickMessage, tickMessageLength);
-			break;
-		}
-	}
-
-	while (pendingWrite) {
-		libusb_handle_events(context);
-	}
-}
-
 void sendNTicks(libusb_context* context, libusb_device_handle* efm_handle, int num_ticks) {
 	for (int i = 0; i < num_ticks; i++) {
 		while (1) {
@@ -71,48 +58,6 @@ void sendNTicks(libusb_context* context, libusb_device_handle* efm_handle, int n
 			libusb_handle_events(context);
 		}
 	}
-}
-
-void testRecv(libusb_context* context, libusb_device_handle* efm_handle) {
-	while(1) {
-		if (!pendingReceive) {
-			memset(receiveBuffer, 0, 512);
-			receiveAsyncMessage(efm_handle, receiveBuffer);
-			break;
-		}
-	}
-
-	while(pendingReceive) {
-		libusb_handle_events(context);
-	}
-
-	printf("Received message: %s\n", receiveBuffer);
-}
-
-/* Test function : send 1 message, recv 1 message */
-
-void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle) {
-	debugprint("Attempting to send tick message to Ytelse MCU", BLUE);
-	while (1) {
-		if (!pendingWrite) {
-			sendAsyncMessage(efm_handle, tickMessage, tickMessageLength);
-			break;
-		}
-	}
-	debugprint("Message sent!", GREEN);
-	while (1) {
-		if (!pendingReceive) {
-			memset(receiveBuffer, 0, 512);
-			receiveAsyncMessage(efm_handle, receiveBuffer);
-			break;
-		}
-	}
-
-	while (pendingReceive) {
-		libusb_handle_events(context);
-	}
-
-	printf("Received message: %s\n", receiveBuffer);
 }
 
 void receiveNMsgs(libusb_context* context, libusb_device_handle* efm_handle, int num_recvs) {

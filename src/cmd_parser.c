@@ -25,6 +25,8 @@ ytelse_command_t parse_cmd(char* string) {
 
 	if (strcmp(string, "help") == 0) {
 		cmd.command = HELP;
+	} else if (strcmp(string, "art") == 0) {
+		cmd.command = ART;
 	} else if (strcmp(string, "quit") == 0) {
 		cmd.command = QUIT;
 	} else  if (strcmp(string, "exit") == 0) {
@@ -113,21 +115,4 @@ ytelse_command_t parse_cmd(char* string) {
 	}
 
 	return cmd;
-}
-
-void print_help_string(void) {
-
-	/* TODO: Update available commands */
-
-	printf("\n");
-	colorprint("Available commands: ", MAGENTA);
-	printf("connect [mcu|fpga]       --  Connect to <device>, defaults to both devices.\n");
-	printf("run [mcu|fpga]           --  Start normal transfers to <device>, defaults to both devices.\n");
-	printf("stop [mcu|fgpa]          --  Stop all transactions with <device>, defaults to both devices.\n");
-	printf("send <mcu|fpga> [n]      --  Send N message to <device>, defaults to 1.\n");
-	printf("recv <mcu|fgpa> [n]      --  Set up receive of N message from <device>, defaults to 1.\n");
-	printf("sendrecv <mcu|fpga> [n]  --  Send and set up receive of N message to/from <device>, defaults to 1.\n");
-	printf("quit, exit               --  Quit the program\n");
-	printf("help                     --  Print list of available commands\n");
-	printf("\n");
 }

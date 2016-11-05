@@ -16,6 +16,8 @@ void debugprint(char* string, int color);
 /* Print in specified color, no matter if DEBUG is defined */
 void colorprint(char* string, int color);
 /* Print startup message */
-void printStartupMsg(void);
+void print_startup_msg(void);
+/* Print list of available commands */
+void print_help_string(void);
 
 #endif
