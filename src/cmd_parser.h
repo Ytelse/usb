@@ -16,15 +16,10 @@ typedef enum commands {
 	HELP, 				/* Print available commands */
 	QUIT,				/* Quit the program */
 	/* Test commands */
-	TESTSEND_N,
-	MCU_TESTSEND,		/* Send 1 message to MCU */
-	FPGA_TESTSEND,		/* Send 1 message to FPGA */
-	MCU_TESTSEND10,     /* Send 10 messages to MCU */
-	FPGA_TESTSEND10,    /* Send 10 messages to FPGA */
+	MCU_TESTSEND_N,		/* Send N messages to MCU */
+	FPGA_TESTSEND_N,	/* Send N messages to FPGA */
 	MCU_TESTRECV,		/* Set up receive of 1 message from MCU */
 	FPGA_TESTRECV,		/* Set up receive of 1 message from FPGA */
-	MCU_TESTRECV10, 	/* Set up receive of 10 messages from MCU */
-	FPGA_TESTRECV10, 	/* Set up receive of 10 messages from FPGA */
 	MCU_TESTSENDRECV,	/* Send and set up receive of 1 message to/from MCU */
 	FPGA_TESTSENDRECV	/* Send and set up receive of 1 message to/from FPGA */
 } cmd_t;

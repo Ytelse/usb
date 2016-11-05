@@ -37,20 +37,14 @@ typedef enum USBState {
 } usb_state_t;
 
 typedef enum Tests {
-	/* General tests */
-	TESTSEND_N_TEST,
 	/* MCU tests, add more as needed */
-	MCU_TESTSEND_TEST,
-	MCU_TESTSEND10_TEST,
-	MCU_TESTRECV_TEST,
-	MCU_TESTRECV10_TEST,
-	MCU_TESTSENDRECV_TEST,
+	MCU_SEND_N_TEST,
+	MCU_RECV_TEST,
+	MCU_SENDRECV_TEST,
 	/* FPGA tests, currently just placeholders */
-	FPGA_TESTSEND_TEST,
-	FPGA_TESTSEND10_TEST,
-	FPGA_TESTRECV_TEST,
-	FPGA_TESTRECV10_TEST,
-	FPGA_TESTSENDRECV_TEST,
+	FPGA_SEND_N_TEST,
+	FPGA_RECV_TEST,
+	FPGA_SENDRECV_TEST,
 	/* Initial value */
 	NO_TEST
 } test_t;
@@ -119,11 +113,47 @@ void mainloop(libusb_context* context) {
 
 		next_state(&state);
 
-		if (state.main_state == GET_CMD) {
-			state.cmd = commandloop();
+		switch(state.main_state) {
+			case GET_CMD:
+				state.cmd = commandloop();
+				break;
+			case CONNECTING :
+				switch(state.usb_state) {
+					case CONNECTING_ALL :
+						/* TODO: Connect to both devices */
+					case CONNECTING_MCU :
+						if (connect(context, &mcu_handle, YTELSE_MCU_DEVICE, &mcu_interface)) {
+							state.usb_state = DISCONNECTED;
+						} else {
+							state.usb_state = CONNECTED_MCU;
+						} 
+						break;
+					case CONNECTING_FPGA :
+						if (connect(context, &fpga_handle, YTELSE_FPGA_DEVICE, &fpga_interface)) {
+							state.usb_state = DISCONNECTED;
+						} else {
+							state.usb_state = CONNECTED_FPGA;
+						}
+						break;
+					default :
+						state.usb_state = DISCONNECTED;
+				}
+			case TESTING :
+				switch (state.test) {
+					case MCU_SEND_N_TEST : /* etc */
+					default :
+						state.test = NO_TEST;
+						break;
+
+				}
+				break;
+			default :
+				/* Do nothing */
+				state.cmd = commandloop();
+				break;
 		}
 
-		if (_kill) {
+		if (_kill || state.cmd == QUIT) {
 			state.main_state = FINALIZE;
 		}
 	}
@@ -196,11 +226,8 @@ void next_state(state_t* state) {
 				case CONNECTED_MCU :
 					switch (state->cmd) {
 						/* TODO: Add all appropriate cases */
-						case TESTSEND_N:
-						case MCU_TESTSEND :
-						case MCU_TESTSEND10 :
+						case MCU_TESTSEND_N :
 						case MCU_TESTRECV :
-						case MCU_TESTRECV10 :
 						case MCU_TESTSENDRECV :
 						case QUIT :
 						case HELP :
@@ -212,10 +239,8 @@ void next_state(state_t* state) {
 					break;
 				case CONNECTED_FPGA :
 					switch (state->cmd) {
-						case FPGA_TESTSEND :
-						case FPGA_TESTSEND10 :
+						case FPGA_TESTSEND_N:
 						case FPGA_TESTRECV :
-						case FPGA_TESTRECV10 :
 						case FPGA_TESTSENDRECV :
 						case QUIT :
 						case HELP :
@@ -231,17 +256,18 @@ void next_state(state_t* state) {
 			}
 			break;
 		case CONNECTING :
-			switch (state->usb_state) {
-				case CONNECTED :
-				case CONNECTED_MCU :
-				case CONNECTED_FPGA :
-					next.main_state = GET_CMD;
-					break;
-				default :
-					/* TODO: Figure out reasonable default */
-					next.main_state = GET_CMD;
-					break;
-			}
+			// switch (state->usb_state) {
+			// 	case CONNECTED :
+			// 	case CONNECTED_MCU :
+			// 	case CONNECTED_FPGA :
+			// 		next.main_state = GET_CMD;
+			// 		break;
+			// 	default :
+			// 		/* TODO: Figure out reasonable default */
+			// 		next.main_state = GET_CMD;
+			// 		break;
+			// }
+			next.main_state = GET_CMD;
 			break;
 		case RUNNING :
 			switch (state->cmd) {
@@ -256,6 +282,7 @@ void next_state(state_t* state) {
 			/* Stop all USB transactions */
 		case TESTING :
 			/* Running some test */
+			next.main_state = GET_CMD;
 		default :
 			/* TODO: Figure out a reasonable default case */
 			next.main_state = GET_CMD;

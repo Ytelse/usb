@@ -4,7 +4,7 @@
 #include <libusb.h>
 
 /* Device types */
-typedef enum Devices {MCU_DEVICE, FPGA_DEVICE} ytelse_device_t;
+typedef enum YtelseDevices {YTELSE_MCU_DEVICE, YTELSE_FPGA_DEVICE} ytelse_device_t;
 
 /* Return codes */
 enum {CONNECT_SUCCESS, CONNECT_FAILURE};

@@ -47,7 +47,7 @@ int connect(libusb_context* context, libusb_device_handle** dev_handle, ytelse_d
 	while (state != USB_DEVICE_FOUND) {
 
 		/* Attempt to connect to device */
-		if (device == MCU_DEVICE) {
+		if (device == YTELSE_MCU_DEVICE) {
 			rc = get_ytelse_mcu_handle(context, dev_handle);
 		} else {
 			rc = get_ytelse_fpga_handle(context, dev_handle);

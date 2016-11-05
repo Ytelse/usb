@@ -9,36 +9,29 @@ cmd_t parse_cmd(char* string) {
 	cmd_t cmd = INVALID_CMD;	
 
 	/* TODO: Update with planned commands corresponding to cmd_t types */
+	/* TODO: General commands */
+	/* TODO: Check for 'connect <target>' where target can be <none> (meaning both), mcu or fpga */
+	/* TODO: Check for 'run <target>'	  -- 							*						 */
+	/* TODO: Check for 'stop <target>'    --							*						 */
+	/* TODO: Check for 'help' */
+	/* TODO: Check for 'quit' */
+	/* TODO: Test commands */
+	/* TODO: Check for 'send n <target>' where target can be mcu or fpga */
+	/* TODO: Check for 'recv n <target>' --				*			  -- */
+	/* TODO: Check for 'sendrecv n <target>' --			*			  -- */
 
-	// if (strcmp(stringBuffer, "testsend") == 0) {
-	// 	cmd = TESTSEND;
-	// } else if (strcmp(stringBuffer, "ts") == 0) {
-	// 	cmd = TESTSEND;
-	// } else if ((strcmp(stringBuffer, "testsend10") == 0)) {
-	// 	cmd = TESTSEND10;
-	// } else if ((strcmp(stringBuffer, "ts10") == 0)) {
-	// 	cmd = TESTSEND10;
-	// } else if (strcmp(stringBuffer, "testrecv") == 0) {
-	// 	cmd = TESTRECV;
-	// } else if (strcmp(stringBuffer, "tr") == 0) {
-	// 	cmd = TESTRECV;
-	// } else if (strcmp(stringBuffer, "testrecv10") == 0) {
-	// 	cmd = TESTRECV10;
-	// } else if (strcmp(stringBuffer, "tr10") == 0) {
-	// 	cmd = TESTRECV10;
-	// } else if (strcmp(stringBuffer, "testsendrecv") == 0) {
-	// 	cmd = TESTSENDRECV;
-	// } else if (strcmp(stringBuffer, "tsr") == 0) {
-	// 	cmd = TESTSENDRECV;
-	// } else if (strcmp(stringBuffer, "help") == 0) {
-	// 	cmd = HELP;
-	// } else if (strcmp(stringBuffer, "quit") == 0) {
-	// 	cmd = QUIT;
-	// } else  if (strcmp(stringBuffer, "exit") == 0) {
-	// 	cmd = QUIT;
-	// } else {
-	// 	/* Do nothing */
-	// }
+
+	if (strcmp(string, "help") == 0) {
+		cmd = HELP;
+	} else if (strcmp(string, "quit") == 0) {
+		cmd = QUIT;
+	} else  if (strcmp(string, "exit") == 0) {
+		cmd = QUIT;
+	} else if (strcmp(string, "connect") == 0) {
+		cmd = CONNECT_MCU;
+	} else {
+		/* TODO: Check space seperated strings */
+	}
 
 	return cmd;
 }
