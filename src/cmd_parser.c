@@ -1,3 +1,4 @@
+#include "defs.h"
 #include "cmd_parser.h"
 #include "debug.h"
 
@@ -5,11 +6,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-ytelse_command_t parse_cmd(char* string) {
-	ytelse_command_t cmd;	
+pacman_command_t parse_cmd(char* string) {
+	
+	pacman_command_t cmd;	
 
 	cmd.command = INVALID_CMD;
-	cmd.target = YTELSE_NO_DEVICE;
+	cmd.target = PACMAN_NO_DEVICE;
 	cmd.N = -1;
 
 	/* TODO: Handle 'connect <target>' where target can be <none> (meaning both), mcu or fpga */
@@ -44,23 +46,23 @@ ytelse_command_t parse_cmd(char* string) {
 				if (strcmp(_cmd, "run") == 0) {
 					cmd.command = RUN;
 					if (strcmp(_target, "mcu") == 0) {
-						cmd.target = YTELSE_MCU_DEVICE;
+						cmd.target = PACMAN_MCU_DEVICE;
 					} else {
-						cmd.target = YTELSE_FPGA_DEVICE;
+						cmd.target = PACMAN_FPGA_DEVICE;
 					}
 				} else if (strcmp(_cmd, "stop") == 0) {
 					cmd.command = STOP;
 					if (strcmp(_target, "mcu") == 0) {
-						cmd.target = YTELSE_MCU_DEVICE;
+						cmd.target = PACMAN_MCU_DEVICE;
 					} else {
-						cmd.target = YTELSE_FPGA_DEVICE;
+						cmd.target = PACMAN_FPGA_DEVICE;
 					}
 				} else if (strcmp(_cmd, "connect") == 0) {
 					cmd.command = CONNECT;
 					if (strcmp(_target, "mcu") == 0) {
-						cmd.target = YTELSE_MCU_DEVICE;
+						cmd.target = PACMAN_MCU_DEVICE;
 					} else {
-						cmd.target = YTELSE_FPGA_DEVICE;
+						cmd.target = PACMAN_FPGA_DEVICE;
 					}
 				} else { /* Command is one of send / recv / sendrecv, and we need to get amount as well */
 					_amount = strtok_r(NULL, " ", &saveptr);
@@ -73,32 +75,32 @@ ytelse_command_t parse_cmd(char* string) {
 					if (strcmp(_cmd, "send") == 0) {
 							cmd.command = TESTSEND;
 							if (strcmp(_target, "mcu") == 0) {
-								cmd.target = YTELSE_MCU_DEVICE;
+								cmd.target = PACMAN_MCU_DEVICE;
 							} else {
-								cmd.target = YTELSE_FPGA_DEVICE;
+								cmd.target = PACMAN_FPGA_DEVICE;
 							}
 						} else if (strcmp(_cmd, "recv") == 0) {
 							cmd.command = TESTRECV;
 							if (strcmp(_target, "mcu") == 0) {
-								cmd.target = YTELSE_MCU_DEVICE;
+								cmd.target = PACMAN_MCU_DEVICE;
 							} else {
-								cmd.target = YTELSE_FPGA_DEVICE;
+								cmd.target = PACMAN_FPGA_DEVICE;
 							}
 						} else if (strcmp(_cmd, "sendrecv") == 0) {
 							cmd.command = TESTSENDRECV;
 							if (strcmp(_target, "mcu") == 0) {
-								cmd.target = YTELSE_MCU_DEVICE;
+								cmd.target = PACMAN_MCU_DEVICE;
 							} else {
-								cmd.target = YTELSE_FPGA_DEVICE;
+								cmd.target = PACMAN_FPGA_DEVICE;
 							}
 						} else {
 							cmd.command = INVALID_CMD;
-							cmd.target = YTELSE_NO_DEVICE;
+							cmd.target = PACMAN_NO_DEVICE;
 							cmd.N = -1;
 						}/* If none of these, it's an invalid command */
 				} 
 			} else { /* If no target, a valid command refers to both devices */
-				cmd.target = YTELSE_BOTH_DEVICES;
+				cmd.target = PACMAN_BOTH_DEVICES;
 				if (strcmp(_cmd, "run") == 0) {
 					cmd.command = RUN;
 				} else if (strcmp(_cmd, "stop") == 0) {	
@@ -107,7 +109,7 @@ ytelse_command_t parse_cmd(char* string) {
 					cmd.command = CONNECT;
 				} else {
 					cmd.command = INVALID_CMD;
-					cmd.target = YTELSE_NO_DEVICE;
+					cmd.target = PACMAN_NO_DEVICE;
 					cmd.N = -1;
 				}/* If not one of these, just return INVALID_CMD */
 			}

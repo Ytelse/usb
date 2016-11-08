@@ -1,10 +1,10 @@
+#include "defs.h"
 #include "debug.h"
 #include "pacman_comm_setup.h"
 #include "mcu_comm.h"
 #include "fpga_comm.h"
 #include "cmd_parser.h"
 #include "pthread_helper.h"
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,49 +14,12 @@
 #include <signal.h>
 #include <pthread.h>
 
-/* enum for main loop flow control */
-typedef enum MainloopState {
-	/* Overall */
-	INIT,							/* Initial state */
-	FINALIZE, 						/* Exit state, stop all communication */
-	CONNECTING,						/* Connect to one or more devices */
-	RUNNING,						/* Host is sending data to FPGA and receiving results from MCU */
-	STOPPING,						/* Halt the program without releasing devices and quitting */
-	TESTING,						/* Running some test function for a device */
-	GET_CMD,						/* Waiting for command input */
-	UNDEFINED						/* Undefined state */
-} main_state_t;
-
-typedef enum USBState {
-	DISCONNECTED,					/* No USB devices connected to host */
-	CONNECTED,						/* Both USB devices connected to host */
-	CONNECTED_FPGA,					/* Only FPGA connected to host */
-	CONNECTED_MCU,					/* Only MCU connected to host */
-	CONNECTING_ALL,					/* Attempting to connect to both devices */
-	CONNECTING_FPGA,				/* Attempting to connect to FPGA */
-	CONNECTING_MCU,					/* Attempting to connect to MCU */
-} usb_state_t;
-
-typedef enum Tests {
-	/* MCU tests, add more as needed */
-	SEND_TEST,
-	RECV_TEST,
-	SENDRECV_TEST,
-	/* Initial value */
-	NO_TEST
-} test_t;
-
-typedef struct State {
-	main_state_t main_state; /* State of mainloop */
-	usb_state_t usb_state;
-	pacman_command_t cmd;
-	test_t test;
-} state_t;
-
 /* Global kill signal */
 volatile sig_atomic_t _kill;
 /* Thread keep-alive signal */
 volatile int _keepalive;
+/* Thread barrier for synchronizing */
+barrier_t barrier;
 
 void inthand(int signum) {
     _kill = 1;
@@ -67,10 +30,11 @@ void mainloop(libusb_context* context);
 void next_state(state_t* state);
 void init_state(state_t* state);
 void finalize(state_t state, libusb_device_handle* mcu_handle, libusb_device_handle* fpga_handle, int mcu_interface, int fpga_interface);
+int run(state_t state, libusb_context* context, libusb_device_handle* mcu_handle, libusb_device_handle* fpga_handle, int mcu_interface, int fpga_interface);
 pacman_command_t commandloop(void);
+void* control_thread(void* void_ptr);
 
 int main(void) {
-
 	/* Handle ctrl-c gracefully */
 	signal(SIGINT, inthand);
 
@@ -97,7 +61,7 @@ int main(void) {
 void mainloop(libusb_context* context) {
 	/* Program state */
 	state_t state;
-	
+
 	init_state(&state);
 	
 	/* Return codes */
@@ -111,7 +75,7 @@ void mainloop(libusb_context* context) {
 
 		next_state(&state);
 
-		switch(state.main_state) {
+		switch (state.main_state) {
 			case GET_CMD:
 				state.cmd = commandloop();
 				break;
@@ -135,6 +99,15 @@ void mainloop(libusb_context* context) {
 						break;
 					default :
 						state.usb_state = DISCONNECTED;
+				}
+			case RUNNING :
+				/* TODO: Add functionality for starting one at a time */
+				switch (state.cmd.target) {
+					case PACMAN_MCU_DEVICE :
+					case PACMAN_FPGA_DEVICE :
+					case PACMAN_BOTH_DEVICES :
+					default :
+						run(state, context, mcu_handle, fpga_handle, mcu_interface, fpga_interface);
 				}
 			case TESTING :
 				switch (state.test) {
@@ -205,6 +178,9 @@ void next_state(state_t* state) {
 							next.main_state = GET_CMD;
 							print_help_string();
 							break;
+						case RUN : /* TODO: remove this, only for testing */
+							next.main_state = RUNNING;
+							break;
 						default :
 							printf("No connected devices.\n");
 							next.main_state = GET_CMD;
@@ -215,6 +191,8 @@ void next_state(state_t* state) {
 					switch (state->cmd.command) {
 						/* TODO: Add all appropriate cases */
 						case RUN :
+							next.main_state = RUNNING;
+							break;
 						case STOP :
 						case CONNECT : /* In case connect to 1 device and want to connect other */
 						case QUIT :
@@ -329,6 +307,75 @@ void finalize(state_t state, libusb_device_handle* mcu_handle, libusb_device_han
 	}
 
 	/* TODO: Close any remaining open files and free remaining allocated memory */
+}
+
+int run(state_t state, libusb_context* context, libusb_device_handle* mcu_handle, libusb_device_handle* fpga_handle, int mcu_interface, int fpga_interface) {
+	int rc;
+	pthread_t fpga_thread, mcu_thread, ctrl_thread;
+	_keepalive = 1;
+
+	pdata_t fpga_data, mcu_data;
+
+	/* Initialize structs */
+	fpga_data.state = &state;
+	fpga_data.context = context;
+	fpga_data.dev_handle = fpga_handle;
+	fpga_data.dev_interface = &fpga_interface;
+
+	mcu_data.state = &state;
+	mcu_data.context = context;
+	mcu_data.dev_handle = mcu_handle;
+	mcu_data.dev_interface = &mcu_interface;
+
+	/* Initialize barrier(s) */
+	barrier_init(&barrier, 3);
+
+	debugprint("Creating threads...", DEFAULT);
+
+	/* Spawn FPGA thread */
+	rc = pthread_create(&fpga_thread, NULL, fpga_runloop, (void*)&fpga_data);
+	if (rc) {
+		colorprint("ERROR: pthread_create() failed!", RED);
+		return rc;
+	}
+	/* Spawn MCU thread */
+	rc = pthread_create(&mcu_thread, NULL, mcu_runloop, (void*)&mcu_data);
+	if (rc) {
+		colorprint("ERROR: pthread_create() failed!", RED);
+		return rc;
+	}
+	/* Spawn control thread */
+	rc = pthread_create(&ctrl_thread, NULL, control_thread, NULL);
+	if (rc) {
+		colorprint("ERROR: pthread_create() failed!", RED);
+		return rc;
+	}
+
+	pthread_join(fpga_thread, NULL);
+	pthread_join(mcu_thread, NULL);
+	pthread_join(ctrl_thread, NULL);
+
+	debugprint("Threads joined.", GREEN);
+	return 0;
+}
+
+/* A thread used only for being able to stop the other two threads. Not very pretty. */
+void* control_thread(void* void_ptr) {
+	pacman_command_t cmd;
+
+	/* Wait for the other 2 threads */
+	barrier_wait(&barrier);
+
+	while (_keepalive) {
+		cmd = commandloop();
+		if (cmd.command == STOP || _kill) {
+			_keepalive = 0;
+		} else {
+			printf("Only available command in run mode is 'stop'.\n");
+		}
+	}
+
+	return NULL;
 }
 
 /* 
