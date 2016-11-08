@@ -8,29 +8,28 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define IMAGES_FP "resources/bit_mnist_images"
-#define NOF_IMAGES 70000
+#define IMG_FP "resources/train-images-idx3-ubyte"
+
+#define NOF_IMAGES 70000	// Test set size + training set size
+#define IMG_SIZE 784	// 28*28 -- Full size of the MNIST images
 
 extern int _keepalive;
 extern barrier_t barrier;
 
 typedef unsigned char byte_t;
 
-typedef struct Image {
-	/* Array of bytes containing 8 pixels each */
-	byte_t packed_px[98];
-} image_t;
-
 /* Test functions */
-static void read_bitfile_image(image_t image, int* img);
-static void printImg(int* img);
+static void printImg(byte_t* img);
 
 void * fpga_runloop(void* pdata_void_ptr) {
 	/* Cast void ptr back to original type */
 	pdata_t* pdata = (pdata_t*) pdata_void_ptr;
 	/* Array of images */
-	image_t* images;
-	images = (image_t*) malloc(sizeof(image_t) * NOF_IMAGES);
+	byte_t** img;
+	img = (byte_t**) malloc(sizeof(byte_t*) * NOF_IMAGES);
+	for (int i = 0; i < NOF_IMAGES; i++) {
+		img[i] = (byte_t*) malloc(sizeof(byte_t)*IMG_SIZE);
+	}
 	
 	#ifdef DEBUG
 	/* Time file I/O */
@@ -40,7 +39,7 @@ void * fpga_runloop(void* pdata_void_ptr) {
 	debugprint("FPGA_comm: Reading MNIST data set into memory...", DEFAULT);
 
 	FILE* f;
-	f = fopen(IMAGES_FP, "rb");
+	f = fopen(IMG_FP, "rb");
 
 	if (!f) {
 		colorprint("ERROR: FPGA_comm: Failed to open image set!", RED);
@@ -52,8 +51,8 @@ void * fpga_runloop(void* pdata_void_ptr) {
 	#endif
 
 	for (int n = 0; n < NOF_IMAGES; n++) {
-		for (int p = 0; p < 98; p++) {
-			images[n].packed_px[p] = getc(f);
+		for (int px = 0; px < IMG_SIZE; px++) {
+			img[n][px] = getc(f);
 		}
  	}
 
@@ -72,32 +71,79 @@ void * fpga_runloop(void* pdata_void_ptr) {
 
  	debugprint("FPGA_comm: Got past barrier!", GREEN);
 
+ 	printImg(img[0]);
+
  	while (_keepalive) {};
 
  	debugprint("FPGA_comm: Finished busy-wait. Freeing images.", DEFAULT);
 
- 	free(images);
+ 	/* Free MNIST dataset */
+
+ 	for (int i = 0; i < NOF_IMAGES; i++) {
+ 		free(img[i]);
+ 	}
+ 	free(img);
 
 	return NULL;
 
 }
 
-/* TEST */
+/**
+ *	Description:
+ *		Interleaves images in order to help the FPGA to process images in parallel.
+ *	Params:
+ *		int n,				-- Number of images to be interleaved
+ *		int iw,				-- Interleave width, number of bits in sequence from each image
+ *		image_t* images,	-- Pointer to the first of the n images to be interleaved
+ *		image_t* saveptr	-- I images == NULL, saveptr will be used as starting point.
+ *		byte_t* result		-- Pointer to the resulting array. Will be malloc'd in this function, and needs to be freed by the caller.
+ *	
+ *	Returns: Length of the result array
+ */	
 
-static void read_bitfile_image(image_t image, int* img) {
-	byte_t temp = 0;
-	for (int i = 0; i < 98; i++) {
-		temp = image.packed_px[i];
-		for (int offset = 0; offset < 8; offset++) {
-			img[i * 8 + offset] = (temp & (1 << (7 - offset))) >> (7 - offset);
+static int interleave(int n, int iw, byte_t** img, byte_t** saveptr, byte_t* result) {
+	/* Temporary result, stored in bytes */
+	byte_t* temp_result = (byte_t*) malloc(n * IMG_SIZE * sizeof(byte_t));
+	/* Final result, bits packed in bytes */
+	result = (byte_t*) malloc(((n * IMG_SIZE) / 8) * sizeof(byte_t));
+
+	byte_t** img_ptr;
+	/* If images == NULL use saveptr */
+	img_ptr = (img) ? img : saveptr;
+
+	/* Interleave images into temp_result */
+
+	/* TODO: Fix this loop, unsure if it produces correct result */
+
+	for (int i = 0; i < n*IMG_SIZE; i+=iw) {
+		for (int j = 0; j < n; j++) {
+			for (int k = 0; k < iw; k++) {
+				temp_result[i + j * iw + k] = img_ptr[j][i+k]
+			}
 		}
 	}
+
+	/* Pack temp_result into result */
+
+	byte_t byte = 0;
+	for (int i = 0; i < bytesize; i++) {
+		byte = 0;
+		for (int i = 0; i < 8; i++) {
+
+		}
+	}
+
+	free(temp_result);
+	saveptr = img_ptr + n;
+
 }
 
-static void printImg(int* img) {
+/* TEST */
+
+static void printImg(byte_t* img) {
 	for (int x = 0; x < 28; x++) {
 		for (int y = 0; y < 28; y++) {
-			fprintf(stdout, "%d ", img[x * 28 + y]);
+			fprintf(stdout, "%d ", (int) img[x * 28 + y]);
 		}
 		fprintf(stdout, "\n");
 	}

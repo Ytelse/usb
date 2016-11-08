@@ -1,3 +1,4 @@
+#include "test_usb_functs.h"
 #include "debug.h"
 #include "usb_helpers.h"
 

@@ -100,6 +100,7 @@ void mainloop(libusb_context* context) {
 					default :
 						state.usb_state = DISCONNECTED;
 				}
+				break;
 			case RUNNING :
 				/* TODO: Add functionality for starting one at a time */
 				switch (state.cmd.target) {
@@ -109,6 +110,7 @@ void mainloop(libusb_context* context) {
 					default :
 						run(state, context, mcu_handle, fpga_handle, mcu_interface, fpga_interface);
 				}
+				break;
 			case TESTING :
 				switch (state.test) {
 					case SEND_TEST : /* etc */
@@ -178,9 +180,6 @@ void next_state(state_t* state) {
 							next.main_state = GET_CMD;
 							print_help_string();
 							break;
-						case RUN : /* TODO: remove this, only for testing */
-							next.main_state = RUNNING;
-							break;
 						default :
 							printf("No connected devices.\n");
 							next.main_state = GET_CMD;
@@ -212,6 +211,9 @@ void next_state(state_t* state) {
 						case TESTSEND :
 						case TESTRECV :
 						case TESTSENDRECV :
+						case RUN : /* TODO: Remove this, only for testing */ 
+							next.main_state = RUNNING;
+							break;
 						case QUIT :
 							next.main_state = FINALIZE;
 							break;
