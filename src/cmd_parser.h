@@ -1,7 +1,9 @@
 #ifndef __CMD_PARSER_H_
 #define __CMD_PARSER_H_
 
-#include "ytelse_comm.h"
+/* Inlcuded to get the definition of ytelse_device_t */
+
+#include "pacman_comm_setup.h"
 
 typedef enum commands {
 	/* Useful commands */
@@ -20,11 +22,11 @@ typedef enum commands {
 
 typedef struct Command {
 	cmd_t command;
-	ytelse_device_t target;
+	pacman_device_t target;
 	int N;
-} ytelse_command_t;
+} pacman_command_t;
 
-ytelse_command_t parse_cmd(char* string);
+pacman_command_t parse_cmd(char* string);
 
 
 #endif /* __CMD_PARSE_H_ */

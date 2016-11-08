@@ -33,7 +33,7 @@ INCLUDES:=-I$(LIBUSB_PATH)/include/libusb-1.0 -Isrc
 LIBS:=-L$(LIBUSB_PATH)/lib
 
 CFLAGS:=-std=c99 -Wall $(INCLUDES)
-LDFLAGS:=$(LIBS) -lusb-1.0
+LDFLAGS:=$(LIBS) -lusb-1.0 -lpthread
 
 ################
 # FILES
@@ -46,7 +46,10 @@ debug.c \
 main.c \
 test_usb_functs.c \
 usb_helpers.c \
-ytelse_comm.c \
+pacman_comm_setup.c \
+mcu_comm.c \
+fpga_comm.c \
+pthread_helper.c \
 )
 
 C_FILES := $(notdir $(CSRC))

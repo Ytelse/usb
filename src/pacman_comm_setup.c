@@ -1,4 +1,4 @@
-#include "ytelse_comm.h"
+#include "pacman_comm_setup.h"
 #include "usb_helpers.h"
 #include "debug.h"
 
@@ -11,7 +11,7 @@
 #define MCU_VENDOR_ID 0x10c4
 #define MCU_PRODUCT_ID 0x0007
 
-#define FPGA_VENDOR_ID 0x0000
+#define FPGA_VENDOR_ID 0x0000 /* TODO: Add real IDs */
 #define FPGA_PRODUCT_ID 0x0000
 
 /* Number of attempts before giving up trying to connect to device */
@@ -31,7 +31,7 @@ typedef enum ConnectionState {
 } con_state_t;
 
 /* Internal error codes */
-enum {YTELSE_DEVICE_USB_OPEN_SUCCESS, YTELSE_DEVICE_NOT_FOUND, YTELSE_DEVICE_USB_OPEN_FAILURE};
+enum {PACMAN_DEVICE_USB_OPEN_SUCCESS, PACMAN_DEVICE_NOT_FOUND, PACMAN_DEVICE_USB_OPEN_FAILURE};
 
 /* Function prototypes */
 int get_ytelse_mcu_handle(libusb_context* context, libusb_device_handle** dev_handle);
@@ -39,7 +39,7 @@ int get_ytelse_fpga_handle(libusb_context* context, libusb_device_handle** dev_h
 
 
 
-int connect(libusb_context* context, libusb_device_handle** dev_handle, ytelse_device_t device, int* interface) {
+int connect(libusb_context* context, libusb_device_handle** dev_handle, pacman_device_t device, int* interface) {
 	con_state_t state = USB_DEVICE_NOT_FOUND;
 	int rc = 0;
 	*interface = 0;
@@ -50,7 +50,7 @@ int connect(libusb_context* context, libusb_device_handle** dev_handle, ytelse_d
 	while (state != USB_DEVICE_FOUND) {
 
 		/* Attempt to connect to device */
-		if (device == YTELSE_MCU_DEVICE) {
+		if (device == PACMAN_MCU_DEVICE) {
 			rc = get_ytelse_mcu_handle(context, dev_handle);
 		} else {
 			rc = get_ytelse_fpga_handle(context, dev_handle);
@@ -143,7 +143,7 @@ int get_ytelse_mcu_handle(libusb_context* context, libusb_device_handle** dev_ha
 	count = libusb_get_device_list(context, &device_list);
 	if (count < 0) {
 		colorprint("FATAL ERROR: USB Device list has fewer than 0 entries!", RED);
-		return YTELSE_DEVICE_NOT_FOUND;
+		return PACMAN_DEVICE_NOT_FOUND;
 	}
 
 	for (size_t i = 0; i < count; i++) {
@@ -165,22 +165,22 @@ int get_ytelse_mcu_handle(libusb_context* context, libusb_device_handle** dev_ha
 
 	if (!efm_dev) {
 		debugprint("Could not find PACMAN MCU USB device.", RED);
-		return YTELSE_DEVICE_NOT_FOUND;
+		return PACMAN_DEVICE_NOT_FOUND;
 	}
 	
 	rc = libusb_open(efm_dev, dev_handle);
 	if (rc) {
 		libusb_free_device_list(device_list, 1);
 		debugprint("Failed to open PACMAN MCU USB device!", RED);
-		return YTELSE_DEVICE_USB_OPEN_FAILURE;
+		return PACMAN_DEVICE_USB_OPEN_FAILURE;
 	}
 
 	libusb_free_device_list(device_list, 1);
-	return YTELSE_DEVICE_USB_OPEN_SUCCESS;
+	return PACMAN_DEVICE_USB_OPEN_SUCCESS;
 }
 
 int get_ytelse_fpga_handle(libusb_context* context, libusb_device_handle** dev_handle) {
 	/* PLACEHOLDE */
 	colorprint("ERROR: Not yet supported!", RED);
-	return YTELSE_DEVICE_NOT_FOUND;
+	return PACMAN_DEVICE_NOT_FOUND;
 }

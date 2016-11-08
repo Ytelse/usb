@@ -35,7 +35,7 @@ ytelse_command_t parse_cmd(char* string) {
 		char* saveptr; /* Pointer required by strtok_r */
 		char *_cmd, *_target, *_amount; /* Pointers to the string tokens we want */
 
-		_cmd = strtok_r(string, " ", &saveptr); /* Get first token from 'string' */
+		_cmd = strtok_r(string, " ", &saveptr); /* Get first space seperated token from 'string' */
 
 		if (_cmd != NULL) {
 			_target = strtok_r(NULL, " ", &saveptr); /* Pass NULL to get next token from 'string' */

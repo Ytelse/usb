@@ -1,6 +1,9 @@
 #include "debug.h"
-#include "ytelse_comm.h"
+#include "pacman_comm_setup.h"
+#include "mcu_comm.h"
+#include "fpga_comm.h"
 #include "cmd_parser.h"
+#include "pthread_helper.h"
 
 
 #include <stdio.h>
@@ -9,6 +12,7 @@
 #include <libusb.h>
 #include <ctype.h>
 #include <signal.h>
+#include <pthread.h>
 
 /* enum for main loop flow control */
 typedef enum MainloopState {
@@ -45,13 +49,14 @@ typedef enum Tests {
 typedef struct State {
 	main_state_t main_state; /* State of mainloop */
 	usb_state_t usb_state;
-	ytelse_command_t cmd;
+	pacman_command_t cmd;
 	test_t test;
 } state_t;
 
-/* Catch ctrl-c */
-
+/* Global kill signal */
 volatile sig_atomic_t _kill;
+/* Thread keep-alive signal */
+volatile int _keepalive;
 
 void inthand(int signum) {
     _kill = 1;
@@ -62,7 +67,7 @@ void mainloop(libusb_context* context);
 void next_state(state_t* state);
 void init_state(state_t* state);
 void finalize(state_t state, libusb_device_handle* mcu_handle, libusb_device_handle* fpga_handle, int mcu_interface, int fpga_interface);
-ytelse_command_t commandloop(void);
+pacman_command_t commandloop(void);
 
 int main(void) {
 
@@ -115,14 +120,14 @@ void mainloop(libusb_context* context) {
 					case CONNECTING_ALL :
 						/* TODO: Connect to both devices */
 					case CONNECTING_MCU :
-						if (connect(context, &mcu_handle, YTELSE_MCU_DEVICE, &mcu_interface)) {
+						if (connect(context, &mcu_handle, PACMAN_MCU_DEVICE, &mcu_interface)) {
 							state.usb_state = DISCONNECTED;
 						} else {
 							state.usb_state = CONNECTED_MCU;
 						} 
 						break;
 					case CONNECTING_FPGA :
-						if (connect(context, &fpga_handle, YTELSE_FPGA_DEVICE, &fpga_interface)) {
+						if (connect(context, &fpga_handle, PACMAN_FPGA_DEVICE, &fpga_interface)) {
 							state.usb_state = DISCONNECTED;
 						} else {
 							state.usb_state = CONNECTED_FPGA;
@@ -175,13 +180,13 @@ void next_state(state_t* state) {
 						case CONNECT :
 							next.main_state = CONNECTING;
 							switch (state->cmd.target) {
-								case YTELSE_BOTH_DEVICES :
+								case PACMAN_BOTH_DEVICES :
 									next.usb_state = CONNECTING_ALL;
 									break;
-								case YTELSE_FPGA_DEVICE :
+								case PACMAN_FPGA_DEVICE :
 									next.usb_state = CONNECTING_FPGA;
 									break;
-								case YTELSE_MCU_DEVICE :
+								case PACMAN_MCU_DEVICE :
 									next.usb_state = CONNECTING_MCU;
 									break;
 								default :
@@ -303,7 +308,7 @@ void init_state(state_t* state) {
 	state->main_state = INIT;
 	state->usb_state = DISCONNECTED;
 	state->cmd.command = INVALID_CMD;
-	state->cmd.target = YTELSE_NO_DEVICE;
+	state->cmd.target = PACMAN_NO_DEVICE;
 	state->cmd.N = -1;
 	state->test = NO_TEST;
 }
@@ -331,10 +336,10 @@ void finalize(state_t state, libusb_device_handle* mcu_handle, libusb_device_han
 	program interactive. Just add commands as they are implemented.
 */
 
-ytelse_command_t commandloop() {
-	ytelse_command_t cmd;
+pacman_command_t commandloop() {
+	pacman_command_t cmd;
 	cmd.command = INVALID_CMD;
-	cmd.target = YTELSE_NO_DEVICE;
+	cmd.target = PACMAN_NO_DEVICE;
 	cmd.N = -1;
 
 	char stringBuffer[128]; //Unsafe, but who cares
