@@ -4,8 +4,7 @@
 #include <sys/time.h>
 #include <assert.h>
 
-#define IMG_FP1 "t10k-images-idx3-ubyte"
-#define IMG_FP2 "train-images-idx3-ubyte"
+#define IMG_FP "mnist-ubyte-no-header"
 
 #define IMG_X 28
 #define IMG_Y 28
@@ -57,7 +56,7 @@ int main(void) {
 	printf("Images loaded successfully!\n\n");
 
 	fclose(f);
-	
+
 /* ============================================================================================ */
 
 	printf("Interleaving\n");
@@ -99,8 +98,12 @@ int main(void) {
 
  /* ============================================================================================ */
 
- 	printImg(img[0]);
-	printImg(img[69999]);
+ 	printImg(img[69996]);
+ 	printImg(img[69997]);
+ 	printImg(img[69998]);
+ 	printImg(img[69999]);
+	
+	printInterleavedImg(all_results_no_pack[17499], INTERLEAVE_N);
 
 }
 
