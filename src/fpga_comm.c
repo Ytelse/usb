@@ -41,7 +41,6 @@ void * fpga_runloop(void* pdata_void_ptr) {
 
 	FILE* f;
 	f = fopen(IMG_FP, "rb");
-	fseek(f, 32*4, SEEK_SET);
 
 	if (!f) {
 		colorprint("ERROR: FPGA_comm: Failed to open image set!", RED);

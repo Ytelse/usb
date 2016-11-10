@@ -18,15 +18,15 @@ int main(void) {
 	/* Open files */
 	FILE *ls, *ts, *out;
 	ls = fopen(FILEPATH_LEARNING_SET, "rb");
-	assert(ls);
+	assert(ls != NULL);
 	ts = fopen(FILEPATH_TEST_SET, "rb");
-	assert(ts);
+	assert(ts != NULL);
 	out = fopen(FILEPATH_OUTPUTFILE, "wb");
-	assert(out);
+	assert(out != NULL);
 
 	/* Skip header bytes */
-	fseek(ls, 32*4, SEEK_SET);
-	fseek(ts, 32*4, SEEK_SET);
+	fseek(ls, 16, SEEK_SET);
+	fseek(ts, 16, SEEK_SET);
 
 	int count = 0;
 	byte_t byte = 0;
@@ -37,7 +37,7 @@ int main(void) {
 		count++;
 	}
 
-	while(!feof(ts)) {
+	while (!feof(ts)) {
 		byte = getc(ts);
 		putc(byte, out);
 		count++;
