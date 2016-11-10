@@ -21,6 +21,7 @@ typedef unsigned char byte_t;
 
 byte_t* interleave(int n, int iw, byte_t** img, int* result_length);
 byte_t* interleave_no_pack(int n, int iw, byte_t** img, int* result_length);
+byte_t* unpack(byte_t* p_img, int n);
 
 void printImg(byte_t* img);
 void printInterleavedImg(byte_t* i_img, int n);
@@ -181,5 +182,21 @@ void printInterleavedImg(byte_t* i_img, int n) {
 	printf("\n");
 }
 
+byte_t* unpack(byte_t* p_img, int n) {
+	byte_t* u_img;
+	u_img = malloc(sizeof(byte_t) * n * IMG_SIZE);
+
+	for (int i = 0; i < (n * IMG_SIZE)/8; i+=8) {
+		u_img[i+0] = p_img[i] & (1 << 7);
+		u_img[i+1] = p_img[i] & (1 << 6);
+		u_img[i+2] = p_img[i] & (1 << 5);
+		u_img[i+3] = p_img[i] & (1 << 4);
+		u_img[i+4] = p_img[i] & (1 << 3);
+		u_img[i+5] = p_img[i] & (1 << 2);
+		u_img[i+6] = p_img[i] & (1 << 1);
+		u_img[i+7] = p_img[i] & (1 << 0);
+	}
+	return u_img;
+}
 
 
