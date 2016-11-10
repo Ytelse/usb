@@ -1,0 +1,188 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
+#include <sys/time.h>
+
+#define FILEPATH_TEST_SET "train-images-idx3-ubyte"
+
+#define IMG_X 28
+#define IMG_Y 28
+#define IMG_SIZE IMG_X*IMG_Y
+
+#define NOF_IMAGES 60000
+
+#define INTERLEAVE_N 4
+#define INTERLEAVE_WIDTH 28
+
+#define THRESHOLD 40
+
+typedef unsigned char byte_t;
+
+byte_t* interleave(int n, int iw, byte_t** img, byte_t** saveptr, int* result_length);
+byte_t* interleave_no_pack(int n, int iw, byte_t** img, byte_t** saveptr, int* result_length);
+
+void printImg(byte_t* img);
+void printInterleavedImg(byte_t* i_img, int n);
+
+int main(void) {
+
+	struct timeval start, end;
+
+	byte_t** img;
+	img = malloc(sizeof(byte_t*) * NOF_IMAGES);
+	for (int i = 0; i < NOF_IMAGES; i++) {
+		img[i] = malloc(sizeof(byte_t) * IMG_SIZE);
+	}
+
+/* ============================================================================================ */
+
+	printf("Reading images...\n");
+	gettimeofday(&start, NULL);
+
+	FILE* f;
+	f = fopen(FILEPATH_TEST_SET, "rb");
+	fseek(f, 32*4, SEEK_SET);
+
+	for (int n = 0; n < NOF_IMAGES; n++) {
+		for (int px = 0; px < IMG_SIZE; px++) {
+			img[n][px] = getc(f);
+		}
+	}
+
+	gettimeofday(&end, NULL);
+ 	long int ms = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec));
+    double s = ms/1e6;
+ 	printf("File I/O completed in %f s\n", s);
+	printf("Images loaded successfully!\n\n");
+
+/* ============================================================================================ */
+
+	printf("Interleaving\n");
+
+	byte_t** saveptr;
+	byte_t* result;
+	int result_length;
+
+	gettimeofday(&start, NULL);
+	
+	result = interleave(INTERLEAVE_N, INTERLEAVE_WIDTH, img, saveptr, &result_length);
+
+	free(result);
+	for (int n = 1; n < NOF_IMAGES/INTERLEAVE_N; n++) {
+		result = interleave(INTERLEAVE_N, INTERLEAVE_WIDTH, &img[n*INTERLEAVE_N], saveptr, &result_length);
+		free(result);
+	}
+	
+	gettimeofday(&end, NULL);
+	ms = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec));
+    s = ms/1e6;
+ 	
+ 	printf("Interleaving completed in %f s\n", s);
+ 	printf("Interleaving completed successfully!\n\n");
+
+/* ============================================================================================ */
+
+ 	printf("Interleaving w/o packing\n");
+ 	gettimeofday(&start, NULL);
+ 	byte_t** all_results_no_pack = malloc(sizeof(byte_t*) * NOF_IMAGES/INTERLEAVE_N);
+	all_results_no_pack[0] = interleave_no_pack(INTERLEAVE_N, INTERLEAVE_WIDTH, img, saveptr, &result_length);
+	for (int n = 1; n < NOF_IMAGES/INTERLEAVE_N; n++) {
+		all_results_no_pack[n] = interleave_no_pack(INTERLEAVE_N, INTERLEAVE_WIDTH, &img[n*INTERLEAVE_N], saveptr, &result_length);
+	}
+	gettimeofday(&end, NULL);
+	ms = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec));
+    s = ms/1e6;
+ 	printf("Interleaving completed in %f s\n", s);
+ 	printf("Interleaving w/o packing completed successfully!\n");
+
+ /* ============================================================================================ */
+
+ 	printImg(img[0]);
+	printImg(img[69999]);
+
+}
+
+byte_t* interleave(int n, int iw, byte_t** img, byte_t** saveptr, int* result_length) {
+	/* Temporary result, stored in bytes */
+	byte_t* temp_result = malloc(n * IMG_SIZE * sizeof(byte_t));
+	/* Final result, bits packed in bytes */
+	byte_t* result = malloc(((n * IMG_SIZE) / 8) * sizeof(byte_t));
+
+	byte_t** img_ptr;
+	/* If images == NULL use saveptr */
+	img_ptr = (img != NULL) ? img : saveptr;
+
+	/* Interleave images into temp_result */
+
+	for (int i = 0, i_n = 0; i < n*IMG_SIZE; i+=n*iw, i_n+=iw) {
+		for (int j = 0; j < n; j++) {
+			for (int k = 0; k < iw; k++) {
+				temp_result[i + j*iw + k] = img_ptr[j][i_n + k];
+			}
+		}
+	}
+
+	/* Pack temp_result into result */
+
+	byte_t byte, pixel;
+	for (int i = 0; i < (n*IMG_SIZE)/8; i++) {
+		byte = 0;
+		for (int j = 0; j < 8; j++) {
+			pixel = temp_result[i*8 + j];
+			pixel = (pixel >= THRESHOLD) ? 1 : 0;
+			byte |= (pixel << (7 - i));
+		}
+		result[i] = byte;
+	}
+
+	free(temp_result);
+
+	saveptr = img_ptr + n;
+	*result_length = n*IMG_SIZE/8;
+	return result;
+}
+
+byte_t* interleave_no_pack(int n, int iw, byte_t** img, byte_t** saveptr, int* result_length) {
+	byte_t* temp_result = malloc(n * IMG_SIZE * sizeof(byte_t));
+	byte_t** img_ptr;
+	img_ptr = (img != NULL) ? img : saveptr;
+
+	for (int i = 0, i_n = 0; i < n*IMG_SIZE; i+=n*iw, i_n+=iw) {
+		for (int j = 0; j < n; j++) {
+			for (int k = 0; k < iw; k++) {
+				temp_result[i + j*iw + k] = img_ptr[j][i_n + k];
+			}
+		}
+	}
+
+	saveptr = img_ptr + n;
+	*result_length = n*IMG_SIZE;
+	return temp_result;
+}
+
+void printImg(byte_t* img) {
+	int px;
+	for (int x = 0; x < IMG_X; x++) {
+		for (int y = 0; y < IMG_Y; y++) {
+			px = (img[x*IMG_X+y] >= THRESHOLD) ? 1 : 0;
+			fprintf(stdout, "%d ", px);
+		}
+		fprintf(stdout, "\n");
+	}
+	printf("\n");
+}
+
+void printInterleavedImg(byte_t* i_img, int n) {
+	int px;
+	for (int y = 0; y < IMG_Y; y++) {
+		for (int x = 0; x < IMG_X * n; x++) {
+			px = (i_img[y*28*n+x] >= THRESHOLD) ? 1 : 0;
+			printf("%d ", px);
+		}
+		printf("\n");
+	}
+	printf("\n");
+}
+
+
+

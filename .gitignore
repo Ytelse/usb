@@ -37,3 +37,7 @@
 ytelse_usbhost
 build
 resources/mcu_output.txt
+resources/combine_image_sets
+resources/interleave
+resources/t10k-images-idx3-ubyte
+resources/train-images-idx3-ubyte

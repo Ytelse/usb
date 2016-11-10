@@ -8,7 +8,7 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define IMG_FP "resources/train-images-idx3-ubyte"
+#define IMG_FP "resources/mnist-ubyte-no-header"
 
 #define NOF_IMAGES 70000	// Test set size + training set size
 #define IMG_SIZE 784	// 28*28 -- Full size of the MNIST images
@@ -20,6 +20,7 @@ typedef unsigned char byte_t;
 
 /* Test functions */
 static void printImg(byte_t* img);
+static byte_t* interleave(int n, int iw, byte_t** img, byte_t** saveptr, int* result_length);
 
 void * fpga_runloop(void* pdata_void_ptr) {
 	/* Cast void ptr back to original type */
@@ -40,6 +41,7 @@ void * fpga_runloop(void* pdata_void_ptr) {
 
 	FILE* f;
 	f = fopen(IMG_FP, "rb");
+	fseek(f, 32*4, SEEK_SET);
 
 	if (!f) {
 		colorprint("ERROR: FPGA_comm: Failed to open image set!", RED);
@@ -95,56 +97,42 @@ void * fpga_runloop(void* pdata_void_ptr) {
  *		int n,				-- Number of images to be interleaved
  *		int iw,				-- Interleave width, number of bits in sequence from each image
  *		image_t* images,	-- Pointer to the first of the n images to be interleaved
- *		image_t* saveptr	-- I images == NULL, saveptr will be used as starting point.
- *		byte_t* result		-- Pointer to the resulting array. Will be malloc'd in this function, and needs to be freed by the caller.
+ *		int* result_length	-- Pointer to a place to store the length of the result
  *	
- *	Returns: Length of the result array
+ *	Returns: Pointer to array containing the packed result of the interleaving. Must be 'free'd by the caller.
  */	
 
-static int interleave(int n, int iw, byte_t** img, byte_t** saveptr, byte_t* result) {
+static byte_t* interleave(int n, int iw, byte_t** img, int* result_length) {
 	/* Temporary result, stored in bytes */
-	byte_t* temp_result = (byte_t*) malloc(n * IMG_SIZE * sizeof(byte_t));
+	byte_t* temp_result = malloc(n * IMG_SIZE * sizeof(byte_t));
 	/* Final result, bits packed in bytes */
-	result = (byte_t*) malloc(((n * IMG_SIZE) / 8) * sizeof(byte_t));
-
-	byte_t** img_ptr;
-	/* If images == NULL use saveptr */
-	img_ptr = (img) ? img : saveptr;
+	byte_t* result = malloc(((n * IMG_SIZE) / 8) * sizeof(byte_t));
 
 	/* Interleave images into temp_result */
 
-	/* TODO: Fix this loop, unsure if it produces correct result */
-
-	for (int i = 0; i < n*IMG_SIZE; i+=iw) {
+	for (int i = 0, i_n = 0; i < n*IMG_SIZE; i+=n*iw, i_n+=iw) {
 		for (int j = 0; j < n; j++) {
 			for (int k = 0; k < iw; k++) {
-				temp_result[i + j * iw + k] = img_ptr[j][i+k]
+				temp_result[i + j*iw + k] = img[j][i_n + k];
 			}
 		}
 	}
 
 	/* Pack temp_result into result */
 
-	byte_t byte = 0;
-	for (int i = 0; i < bytesize; i++) {
+	byte_t byte, pixel;
+	for (int i = 0; i < (n*IMG_SIZE)/8; i++) {
 		byte = 0;
-		for (int i = 0; i < 8; i++) {
-
+		for (int j = 0; j < 8; j++) {
+			pixel = temp_result[i*8 + j];
+			pixel = (pixel >= THRESHOLD) ? 1 : 0;
+			byte |= (pixel << (7 - i));
 		}
+		result[i] = byte;
 	}
 
 	free(temp_result);
-	saveptr = img_ptr + n;
 
-}
-
-/* TEST */
-
-static void printImg(byte_t* img) {
-	for (int x = 0; x < 28; x++) {
-		for (int y = 0; y < 28; y++) {
-			fprintf(stdout, "%d ", (int) img[x * 28 + y]);
-		}
-		fprintf(stdout, "\n");
-	}
+	*result_length = n*IMG_SIZE/8;
+	return result;
 }
