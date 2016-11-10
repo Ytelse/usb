@@ -9,6 +9,8 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+#define UNUSED(x) (void)(x)
+
 enum {RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, DEFAULT};
 
 /* Print only if DEBUG is defined, and in the specified color */
