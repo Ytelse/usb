@@ -11,20 +11,34 @@
 #define IMG_FP "resources/mnist-ubyte-no-header"
 
 #define NOF_IMAGES 70000	// Test set size + training set size
-#define IMG_SIZE 784	// 28*28 -- Full size of the MNIST images
+#define IMG_Y 28
+#define IMG_X 28
+#define IMG_SIZE 784		// 28*28 -- Full size of the MNIST images
+#define THRESHOLD 40		// Threshold for setting pixel value to 0 or 1
+
+
+#define INTERLEAVE_N 4
+#define INTERLEAVE_W 28
 
 extern int _keepalive;
 extern barrier_t barrier;
 
-typedef unsigned char byte_t;
+/* Two buffers to hold interleaved images for sending to the FPGA */
+/* Double buffering allows for interleaving one batch while sending another using async sends */
+byte_t *i_img_buf0, *i_img_buf1;
+
+static byte_t* interleave(int n, int iw, byte_t** img, int* result_length);
 
 /* Test functions */
-static void printImg(byte_t* img);
-static byte_t* interleave(int n, int iw, byte_t** img, byte_t** saveptr, int* result_length);
+void printInterleavedImg(byte_t* i_img, int n);
+byte_t* interleave_no_pack(int n, int iw, byte_t** img, int* result_length);
+void unpackandprint(byte_t* i_img, int n);
+void printpacked(byte_t* i_img, int n);
 
 void * fpga_runloop(void* pdata_void_ptr) {
 	/* Cast void ptr back to original type */
 	pdata_t* pdata = (pdata_t*) pdata_void_ptr;
+	UNUSED(pdata);
 	/* Array of images */
 	byte_t** img;
 	img = (byte_t**) malloc(sizeof(byte_t*) * NOF_IMAGES);
@@ -55,7 +69,9 @@ void * fpga_runloop(void* pdata_void_ptr) {
 		for (int px = 0; px < IMG_SIZE; px++) {
 			img[n][px] = getc(f);
 		}
+		printf("\rReading images -- %2d%% done...", n / 700);
  	}
+ 	printf("\rReading images -- 100%% done.\n");
 
 	#ifdef DEBUG
  	gettimeofday(&end, NULL);
@@ -72,7 +88,14 @@ void * fpga_runloop(void* pdata_void_ptr) {
 
  	debugprint("FPGA_comm: Got past barrier!", GREEN);
 
- 	printImg(img[0]);
+ 	int result_length;
+ 	i_img_buf0 = interleave(INTERLEAVE_N, INTERLEAVE_W, &img[0], &result_length);
+ 	// unpackandprint(i_img_buf0, INTERLEAVE_N);
+ 	i_img_buf1 = interleave(INTERLEAVE_N, INTERLEAVE_W, &img[1], &result_length);
+ 	// unpackandprint(i_img_buf1, INTERLEAVE_N);
+ 	printpacked(i_img_buf1, INTERLEAVE_N);
+ 	free(i_img_buf0);
+ 	free(i_img_buf1);
 
  	while (_keepalive) {};
 
@@ -101,6 +124,8 @@ void * fpga_runloop(void* pdata_void_ptr) {
  *	Returns: Pointer to array containing the packed result of the interleaving. Must be 'free'd by the caller.
  */	
 
+/* TODO: Requires some further testing in order to check that the packing works as intended */
+
 static byte_t* interleave(int n, int iw, byte_t** img, int* result_length) {
 	/* Temporary result, stored in bytes */
 	byte_t* temp_result = malloc(n * IMG_SIZE * sizeof(byte_t));
@@ -119,12 +144,18 @@ static byte_t* interleave(int n, int iw, byte_t** img, int* result_length) {
 
 	/* Pack temp_result into result */
 
-	byte_t byte, pixel;
+	byte_t byte;
+	unsigned int pixel;
 	for (int i = 0; i < (n*IMG_SIZE)/8; i++) {
 		byte = 0;
 		for (int j = 0; j < 8; j++) {
 			pixel = temp_result[i*8 + j];
-			pixel = (pixel >= THRESHOLD) ? 1 : 0;
+			if (pixel >= THRESHOLD) {
+				pixel = 1;
+			} else {
+				pixel = 0;
+			}
+			// pixel = (pixel >= THRESHOLD) ? 1 : 0;
 			byte |= (pixel << (7 - i));
 		}
 		result[i] = byte;

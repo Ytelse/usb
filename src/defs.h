@@ -3,6 +3,8 @@
 
 #include <libusb.h>
 
+typedef unsigned char byte_t;
+
 /* Device types */
 typedef enum PacmanDevices {
 	PACMAN_MCU_DEVICE,
