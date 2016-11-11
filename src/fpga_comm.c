@@ -91,11 +91,13 @@ void * fpga_runloop(void* pdata_void_ptr) {
  	/* TODO: Some crazy pointer magic memory mumbo jumbo going on here. Fix it */
 
  	int result_length;
+
  	i_img_buf0 = interleave(INTERLEAVE_N, INTERLEAVE_W, &img[0], &result_length);
  	i_img_buf1 = interleave(INTERLEAVE_N, INTERLEAVE_W, &img[0], &result_length);
 
  	byte_t* unpacked0 = unpack(i_img_buf0, INTERLEAVE_N);
  	byte_t* unpacked1 = unpack(i_img_buf1, INTERLEAVE_N);
+
  	printInterleavedImg(unpacked0, INTERLEAVE_N);
  	printInterleavedImg(unpacked1, INTERLEAVE_N);
  	free(unpacked0);
@@ -134,12 +136,11 @@ void * fpga_runloop(void* pdata_void_ptr) {
 
 /* TODO: Requires some further testing in order to check that the packing works as intended */
 
-static byte_t* interleave(int n, int iw, byte_t** img, int* result_length) {
+byte_t* interleave(int n, int iw, byte_t** img, int* result_length) {
 	/* Temporary result, stored in bytes */
 	byte_t* temp_result = malloc(n * IMG_SIZE * sizeof(byte_t));
 	/* Final result, bits packed in bytes */
 	byte_t* result = malloc(((n * IMG_SIZE) / 8) * sizeof(byte_t));
-
 	/* Interleave images into temp_result */
 
 	for (int i = 0, i_n = 0; i < n*IMG_SIZE; i+=n*iw, i_n+=iw) {
@@ -177,17 +178,17 @@ static byte_t* interleave(int n, int iw, byte_t** img, int* result_length) {
 
 byte_t* unpack(byte_t* p_img, int n) {
 	byte_t* u_img;
-	u_img = malloc(sizeof(byte_t) * n * IMG_SIZE);
+	u_img = malloc(n * IMG_SIZE * sizeof(byte_t));
 
-	for (int i = 0; i < (n * IMG_SIZE)/8; i+=8) {
-		u_img[i+0] = p_img[i] & (1 << 7);
-		u_img[i+1] = p_img[i] & (1 << 6);
-		u_img[i+2] = p_img[i] & (1 << 5);
-		u_img[i+3] = p_img[i] & (1 << 4);
-		u_img[i+4] = p_img[i] & (1 << 3);
-		u_img[i+5] = p_img[i] & (1 << 2);
-		u_img[i+6] = p_img[i] & (1 << 1);
-		u_img[i+7] = p_img[i] & (1 << 0);
+	for (int i = 0; i < (n * IMG_SIZE)/8; i++) {
+		u_img[i*8+0] = (p_img[i] & (1 << 7));
+		u_img[i*8+1] = (p_img[i] & (1 << 6));
+		u_img[i*8+2] = (p_img[i] & (1 << 5));
+		u_img[i*8+3] = (p_img[i] & (1 << 4));
+		u_img[i*8+4] = (p_img[i] & (1 << 3));
+		u_img[i*8+5] = (p_img[i] & (1 << 2));
+		u_img[i*8+6] = (p_img[i] & (1 << 1));
+		u_img[i*8+7] = (p_img[i] & (1 << 0));
 	}
 	return u_img;
 }
@@ -196,7 +197,7 @@ void printInterleavedImg(byte_t* i_img, int n) {
 	int px;
 	for (int y = 0; y < IMG_Y; y++) {
 		for (int x = 0; x < IMG_X * n; x++) {
-			px = (i_img[y*28*n+x] >= THRESHOLD) ? 1 : 0;
+			px = (i_img[y*28*n+x] >= 1) ? 1 : 0;
 			printf("%d ", px);
 		}
 		printf("\n");

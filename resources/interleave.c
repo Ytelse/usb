@@ -113,7 +113,6 @@ byte_t* interleave(int n, int iw, byte_t** img, int* result_length) {
 	byte_t* temp_result = malloc(n * IMG_SIZE * sizeof(byte_t));
 	/* Final result, bits packed in bytes */
 	byte_t* result = malloc(((n * IMG_SIZE) / 8) * sizeof(byte_t));
-
 	/* Interleave images into temp_result */
 
 	for (int i = 0, i_n = 0; i < n*IMG_SIZE; i+=n*iw, i_n+=iw) {
@@ -126,12 +125,18 @@ byte_t* interleave(int n, int iw, byte_t** img, int* result_length) {
 
 	/* Pack temp_result into result */
 
-	byte_t byte, pixel;
+	byte_t byte;
+	unsigned int pixel;
 	for (int i = 0; i < (n*IMG_SIZE)/8; i++) {
 		byte = 0;
 		for (int j = 0; j < 8; j++) {
 			pixel = temp_result[i*8 + j];
-			pixel = (pixel >= THRESHOLD) ? 1 : 0;
+			if (pixel >= THRESHOLD) {
+				pixel = 1;
+			} else {
+				pixel = 0;
+			}
+			// pixel = (pixel >= THRESHOLD) ? 1 : 0;
 			byte |= (pixel << (7 - i));
 		}
 		result[i] = byte;
