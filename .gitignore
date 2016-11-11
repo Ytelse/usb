@@ -41,3 +41,11 @@ resources/combine_image_sets
 resources/interleave
 resources/t10k-images-idx3-ubyte
 resources/train-images-idx3-ubyte
+interleave/interleave_test
+interleave/build
+*.bmp
+*.d
+interleave/.d/
+interleave/*.bmp
+interleave/img/
+interleave/img/*.bmp
