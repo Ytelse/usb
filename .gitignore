@@ -49,3 +49,4 @@ interleave/.d/
 interleave/*.bmp
 interleave/img/
 interleave/img/*.bmp
+interleave/mnist-ubyte-no-header
