@@ -65,7 +65,14 @@ int main(void) {
 
  	output_not_packed_images(not_packed_results);
 
- 	output_not_packed_deinterleaved_image(not_packed_results[0]);
+ 	/* Test deinterleaving of packed images */
+ 	byte_t** di_results = malloc(sizeof(byte_t*) * INTERLEAVE_N);
+ 	for (int i = 0; i < INTERLEAVE_N; i++) {
+ 		init_di_img_buffer(&di_results[i], IMG_X, IMG_Y);
+ 	}
+
+ 	deinterleave(results[0], di_results, INTERLEAVE_N, INTERLEAVE_WIDTH, IMG_X, IMG_Y, INTERLEAVE_PACKED);
+ 	
  	/* ========== FREE MEMORY ========== */
 
  	for (int n = 0; n < NOF_IMAGES/INTERLEAVE_N; n++) {
@@ -83,32 +90,6 @@ void output_not_packed_images(byte_t** results) {
  		sprintf(filename, OUTPUT_PATH "non_packed_interleaved_image_%.4d.bmp", i);
  		output(filename, results[i], IMG_X*INTERLEAVE_N, IMG_Y);
  	}
-}
-
-void output_not_packed_deinterleaved_image(byte_t* result) {
-	byte_t** di_imgs = malloc(INTERLEAVE_N * sizeof(byte_t*));
-
-	for (int i = 0; i < INTERLEAVE_N; i++) {
-		init_di_img_buffer(&di_imgs[i], IMG_X, IMG_Y);
-	}
-
-	for (int i = 0; i < INTERLEAVE_N; i++) {
-		for (int j = 0; j < 255; j++) {
-			di_imgs[i][j] = 255;
-		}
-	}
-
-	char filename1[80];
-	sprintf(filename1, OUTPUT_PATH "resulttest.bmp");
-	output(filename1, result, IMG_X*INTERLEAVE_N, IMG_Y);
-
-	deinterleave(result, di_imgs, INTERLEAVE_N, INTERLEAVE_WIDTH, IMG_X, IMG_Y, INTERLEAVE_UNPACKED);
-
-	for (int i = 0; i < INTERLEAVE_N; i++) {
-		char filename[80];
-		sprintf(filename, OUTPUT_PATH "test_%.4d.bmp", i);
-		output(filename, di_imgs[i], IMG_X, IMG_Y);
-	}
 }
 
 

@@ -15,12 +15,12 @@ typedef enum {INTERLEAVE_PACKED, INTERLEAVE_UNPACKED} i_mode_t;
 #define IMG_SIZE 784
 
 /* Threshold for use when downsampling images */
-#define THRESHOLD 40
+#define THRESHOLD 100
 
 /* Number of images to interleave at a time */
-#define INTERLEAVE_N 11
+#define INTERLEAVE_N 4
 /* Number of pixels to take from each image in turn */
-#define INTERLEAVE_WIDTH 7
+#define INTERLEAVE_WIDTH 28
 
 #define OUTPUT_PATH "src/img/"
 

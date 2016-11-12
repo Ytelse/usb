@@ -38,7 +38,7 @@ int interleave(byte_t** img, byte_t* i_img, int n, int iw, int x_size, int y_siz
 
 	if (mode == INTERLEAVE_PACKED) {
 		/* The pack function assigns values to the interleaved image array */
-		len = test_pack(temp_result, i_img, n*x_size*y_size, threshold);
+		len = pack(temp_result, i_img, n*x_size*y_size, threshold);
 	} else {
 		/* If no packing we need to assign the temp values to the interleaved image array */
 		for (int i = 0; i < n*x_size*y_size; i++) {
