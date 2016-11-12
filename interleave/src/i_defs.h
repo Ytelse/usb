@@ -7,7 +7,7 @@ typedef enum {INTERLEAVE_PACKED, INTERLEAVE_UNPACKED} i_mode_t;
 /* Image filepath */
 #define IMG_FP "resources/mnist-ubyte-no-header"
 /* Number of images we want to fetch from data set. Max = 70000 */
-#define NOF_IMAGES 128 
+#define NOF_IMAGES 30000 
 
 /* Dataset image dimensions */
 #define IMG_X 28

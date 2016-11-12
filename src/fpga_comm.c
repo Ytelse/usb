@@ -1,6 +1,11 @@
 #include "defs.h"
+#include "i_defs.h"
+
+#include "interleave.h"
 #include "pthread_helper.h"
 #include "debug.h"
+
+#include "printimg.h"
 
 #include <pthread.h>
 #include <stdlib.h>
@@ -8,33 +13,11 @@
 #include <time.h>
 #include <sys/time.h>
 
-#define IMG_FP "resources/mnist-ubyte-no-header"
-
-#define NOF_IMAGES 70000	// Test set size + training set size
-#define IMG_Y 28
-#define IMG_X 28
-#define IMG_SIZE 784		// 28*28 -- Full size of the MNIST images
-#define THRESHOLD 40		// Threshold for setting pixel value to 0 or 1
-
-
-#define INTERLEAVE_N 4
-#define INTERLEAVE_W 28
 
 extern int _keepalive;
 extern barrier_t barrier;
 
-static byte_t* interleave(int n, int iw, byte_t** img, int* result_length);
-byte_t* unpack(byte_t* p_img, int n);
-
-/* Test functions */
-void printInterleavedImg(byte_t* i_img, int n);
-
-
 void * fpga_runloop(void* pdata_void_ptr) {
-
-	/* Two buffers to hold interleaved images for sending to the FPGA */
-	/* Double buffering allows for interleaving one batch while sending another using async sends */
-	byte_t *i_img_buf0, *i_img_buf1;
 
 	/* Cast void ptr back to original type */
 	pdata_t* pdata = (pdata_t*) pdata_void_ptr;
@@ -69,7 +52,7 @@ void * fpga_runloop(void* pdata_void_ptr) {
 		for (int px = 0; px < IMG_SIZE; px++) {
 			img[n][px] = getc(f);
 		}
-		printf("\rReading images -- %2d%% done...", n / 700);
+		printf("\rReading images -- %2d%% done...", n / (NOF_IMAGES/100));
  	}
  	printf("\rReading images -- 100%% done.\n");
 
@@ -88,26 +71,27 @@ void * fpga_runloop(void* pdata_void_ptr) {
 
  	debugprint("FPGA_comm: Got past barrier!", GREEN);
 
- 	/* TODO: Some crazy pointer magic memory mumbo jumbo going on here. Fix it */
+ 	int img_num = 0;
 
- 	int result_length;
-
- 	i_img_buf0 = interleave(INTERLEAVE_N, INTERLEAVE_W, &img[0], &result_length);
- 	i_img_buf1 = interleave(INTERLEAVE_N, INTERLEAVE_W, &img[0], &result_length);
-
- 	byte_t* unpacked0 = unpack(i_img_buf0, INTERLEAVE_N);
- 	byte_t* unpacked1 = unpack(i_img_buf1, INTERLEAVE_N);
-
- 	printInterleavedImg(unpacked0, INTERLEAVE_N);
- 	printInterleavedImg(unpacked1, INTERLEAVE_N);
- 	free(unpacked0);
- 	free(unpacked1);
-
-
- 	free(i_img_buf0);
- 	free(i_img_buf1);
-
- 	while (_keepalive) {};
+ 	byte_t *i_img_buf0, *i_img_buf1;
+ 	init_i_img_buffer(&i_img_buf0, IMG_X, IMG_Y, ITRLV_N, INTERLEAVE_UNPACKED);
+ 	init_i_img_buffer(&i_img_buf1, IMG_X, IMG_Y, ITRLV_N, INTERLEAVE_UNPACKED);
+ 	while (_keepalive) {
+ 		/* Outupt some images just for testing */
+ 		if (img_num < 20) {
+ 			char filename[80];
+ 			if (img_num % 2) {
+ 				sprintf(filename, OUTPUT_PATH "image_%.4d_b0.bmp", img_num);
+ 				interleave(&img[img_num*ITRLV_N], i_img_buf0, ITRLV_N, ITRLV_W, IMG_X, IMG_Y, INTERLEAVE_UNPACKED, THRESHOLD);
+ 				output(filename, i_img_buf0, IMG_X*ITRLV_N, IMG_Y);
+ 			} else {
+ 				sprintf(filename, OUTPUT_PATH "image_%.4d_b1.bmp", img_num);
+ 				interleave(&img[img_num*ITRLV_N], i_img_buf1, ITRLV_N, ITRLV_W, IMG_X, IMG_Y, INTERLEAVE_UNPACKED, THRESHOLD);
+ 				output(filename, i_img_buf1, IMG_X*ITRLV_N, IMG_Y);
+ 			}
+ 		}
+ 		img_num++;
+ 	};
 
  	debugprint("FPGA_comm: Finished busy-wait. Freeing images.", DEFAULT);
 
@@ -118,89 +102,9 @@ void * fpga_runloop(void* pdata_void_ptr) {
  	}
  	free(img);
 
+ 	destroy_i_img_buffer(i_img_buf0);
+ 	destroy_i_img_buffer(i_img_buf1);
+
 	return NULL;
 
-}
-
-/**
- *	Description:
- *		Interleaves images in order to help the FPGA to process images in parallel.
- *	Params:
- *		int n,				-- Number of images to be interleaved
- *		int iw,				-- Interleave width, number of bits in sequence from each image
- *		image_t* images,	-- Pointer to the first of the n images to be interleaved
- *		int* result_length	-- Pointer to a place to store the length of the result
- *	
- *	Returns: Pointer to array containing the packed result of the interleaving. Must be 'free'd by the caller.
- */	
-
-/* TODO: Requires some further testing in order to check that the packing works as intended */
-
-byte_t* interleave(int n, int iw, byte_t** img, int* result_length) {
-	/* Temporary result, stored in bytes */
-	byte_t* temp_result = malloc(n * IMG_SIZE * sizeof(byte_t));
-	/* Final result, bits packed in bytes */
-	byte_t* result = malloc(((n * IMG_SIZE) / 8) * sizeof(byte_t));
-	/* Interleave images into temp_result */
-
-	for (int i = 0, i_n = 0; i < n*IMG_SIZE; i+=n*iw, i_n+=iw) {
-		for (int j = 0; j < n; j++) {
-			for (int k = 0; k < iw; k++) {
-				temp_result[i + j*iw + k] = img[j][i_n + k];
-			}
-		}
-	}
-
-	/* Pack temp_result into result */
-
-	byte_t byte;
-	unsigned int pixel;
-	for (int i = 0; i < (n*IMG_SIZE)/8; i++) {
-		byte = 0;
-		for (int j = 0; j < 8; j++) {
-			pixel = temp_result[i*8 + j];
-			if (pixel >= THRESHOLD) {
-				pixel = 1;
-			} else {
-				pixel = 0;
-			}
-			// pixel = (pixel >= THRESHOLD) ? 1 : 0;
-			byte |= (pixel << (7 - i));
-		}
-		result[i] = byte;
-	}
-
-	free(temp_result);
-
-	*result_length = n*IMG_SIZE/8;
-	return result;
-}
-
-byte_t* unpack(byte_t* p_img, int n) {
-	byte_t* u_img;
-	u_img = malloc(n * IMG_SIZE * sizeof(byte_t));
-
-	for (int i = 0; i < (n * IMG_SIZE)/8; i++) {
-		u_img[i*8+0] = (p_img[i] & (1 << 7));
-		u_img[i*8+1] = (p_img[i] & (1 << 6));
-		u_img[i*8+2] = (p_img[i] & (1 << 5));
-		u_img[i*8+3] = (p_img[i] & (1 << 4));
-		u_img[i*8+4] = (p_img[i] & (1 << 3));
-		u_img[i*8+5] = (p_img[i] & (1 << 2));
-		u_img[i*8+6] = (p_img[i] & (1 << 1));
-		u_img[i*8+7] = (p_img[i] & (1 << 0));
-	}
-	return u_img;
-}
-
-void printInterleavedImg(byte_t* i_img, int n) {
-	int px;
-	for (int y = 0; y < IMG_Y; y++) {
-		for (int x = 0; x < IMG_X * n; x++) {
-			px = (i_img[y*28*n+x] >= 1) ? 1 : 0;
-			printf("%d ", px);
-		}
-		printf("\n");
-	}
-	printf("\n");
 }

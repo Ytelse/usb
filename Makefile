@@ -8,6 +8,7 @@ TARGET:=ytelse_usbhost
 # Directories
 OBJDIR:=build
 SRCDIR:=src
+ITRLVDIR:=interleave/src
 
 # ANSI color codes
 # Only used for fancy output
@@ -29,7 +30,7 @@ LD:=gcc
 
 LIBUSB_PATH:=/usr/local/Cellar/libusb/1.0.20
 
-INCLUDES:=-I$(LIBUSB_PATH)/include/libusb-1.0 -Isrc
+INCLUDES:=-I$(LIBUSB_PATH)/include/libusb-1.0 -I$(SRCDIR) -I$(ITRLVDIR)
 LIBS:=-L$(LIBUSB_PATH)/lib
 
 CFLAGS:=-std=c99 -Wall $(INCLUDES)
@@ -50,6 +51,11 @@ pacman_comm_setup.c \
 mcu_comm.c \
 fpga_comm.c \
 pthread_helper.c \
+)
+
+CSRC += $(addprefix $(ITRLVDIR)/, \
+interleave.c \
+printimg.c \
 )
 
 C_FILES := $(notdir $(CSRC))
