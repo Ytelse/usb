@@ -41,18 +41,18 @@ int main(void) {
 
 	/* ========== DO INTERLEAVING ========== */
 
-	byte_t** results = malloc(sizeof(byte_t*) * NOF_IMAGES/INTERLEAVE_N);
-	byte_t** not_packed_results = malloc(sizeof(byte_t*) * NOF_IMAGES/INTERLEAVE_N);
+	byte_t** results = malloc(sizeof(byte_t*) * NOF_IMAGES/ITRLV_N);
+	byte_t** not_packed_results = malloc(sizeof(byte_t*) * NOF_IMAGES/ITRLV_N);
 
 	printf("Interleaving...\n");
 	gettimeofday(&start, NULL);
 
-	for (int n = 0; n < NOF_IMAGES/INTERLEAVE_N; n++) {
-		init_i_img_buffer(&results[n], IMG_X, IMG_Y, INTERLEAVE_N, INTERLEAVE_PACKED);
-		init_i_img_buffer(&not_packed_results[n], IMG_X, IMG_Y, INTERLEAVE_N, INTERLEAVE_UNPACKED);
+	for (int n = 0; n < NOF_IMAGES/ITRLV_N; n++) {
+		init_i_img_buffer(&results[n], IMG_X, IMG_Y, ITRLV_N, INTERLEAVE_PACKED);
+		init_i_img_buffer(&not_packed_results[n], IMG_X, IMG_Y, ITRLV_N, INTERLEAVE_UNPACKED);
 
-		interleave(&img[n*INTERLEAVE_N], results[n], INTERLEAVE_N, INTERLEAVE_WIDTH, IMG_X, IMG_Y, INTERLEAVE_PACKED, THRESHOLD);
-		interleave(&img[n*INTERLEAVE_N], not_packed_results[n], INTERLEAVE_N, INTERLEAVE_WIDTH, IMG_X, IMG_Y, INTERLEAVE_UNPACKED, THRESHOLD);
+		interleave(&img[n*ITRLV_N], results[n], ITRLV_N, ITRLV_W, IMG_X, IMG_Y, INTERLEAVE_PACKED, THRESHOLD);
+		interleave(&img[n*ITRLV_N], not_packed_results[n], ITRLV_N, ITRLV_W, IMG_X, IMG_Y, INTERLEAVE_UNPACKED, THRESHOLD);
 	}
 
 	gettimeofday(&end, NULL);
@@ -66,16 +66,16 @@ int main(void) {
  	output_not_packed_images(not_packed_results);
 
  	/* Test deinterleaving of packed images */
- 	byte_t** di_results = malloc(sizeof(byte_t*) * INTERLEAVE_N);
- 	for (int i = 0; i < INTERLEAVE_N; i++) {
+ 	byte_t** di_results = malloc(sizeof(byte_t*) * ITRLV_N);
+ 	for (int i = 0; i < ITRLV_N; i++) {
  		init_di_img_buffer(&di_results[i], IMG_X, IMG_Y);
  	}
 
- 	deinterleave(results[0], di_results, INTERLEAVE_N, INTERLEAVE_WIDTH, IMG_X, IMG_Y, INTERLEAVE_PACKED);
+ 	deinterleave(results[0], di_results, ITRLV_N, ITRLV_W, IMG_X, IMG_Y, INTERLEAVE_PACKED);
  	
  	/* ========== FREE MEMORY ========== */
 
- 	for (int n = 0; n < NOF_IMAGES/INTERLEAVE_N; n++) {
+ 	for (int n = 0; n < NOF_IMAGES/ITRLV_N; n++) {
  		destroy_i_img_buffer(results[n]);
  		destroy_i_img_buffer(not_packed_results[n]);
  	}
@@ -85,10 +85,10 @@ int main(void) {
 }
 
 void output_not_packed_images(byte_t** results) {
-	for (int i = 0; i < NOF_IMAGES/INTERLEAVE_N; i++) {
+	for (int i = 0; i < NOF_IMAGES/ITRLV_N; i++) {
  		char filename[80];
  		sprintf(filename, OUTPUT_PATH "non_packed_interleaved_image_%.4d.bmp", i);
- 		output(filename, results[i], IMG_X*INTERLEAVE_N, IMG_Y);
+ 		output(filename, results[i], IMG_X*ITRLV_N, IMG_Y);
  	}
 }
 
