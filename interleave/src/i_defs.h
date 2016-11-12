@@ -5,7 +5,7 @@ typedef unsigned char byte_t;
 typedef enum {INTERLEAVE_PACKED, INTERLEAVE_UNPACKED} i_mode_t;
 
 /* Image filepath */
-#define IMG_FP "mnist-ubyte-no-header"
+#define IMG_FP "resources/mnist-ubyte-no-header"
 /* Number of images we want to fetch from data set. Max = 70000 */
 #define NOF_IMAGES 128 
 
@@ -18,11 +18,11 @@ typedef enum {INTERLEAVE_PACKED, INTERLEAVE_UNPACKED} i_mode_t;
 #define THRESHOLD 100
 
 /* Number of images to interleave at a time */
-#define INTERLEAVE_N 4
+#define ITRLV_N 4
 /* Number of pixels to take from each image in turn */
-#define INTERLEAVE_WIDTH 28
+#define ITRLV_W 28
 
-#define OUTPUT_PATH "src/img/"
+#define OUTPUT_PATH "resources/img_out/"
 
 /*
 	Ex. 
