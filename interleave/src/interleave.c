@@ -1,7 +1,6 @@
 #include "interleave.h"
 
 #include <stdlib.h>
-#include <stdio.h>
 
 /* Local function prototypes */
 static int pack(byte_t* u_img, byte_t* p_img, int len, int threshold);
