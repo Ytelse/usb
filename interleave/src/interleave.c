@@ -1,10 +1,10 @@
 #include "interleave.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 
 /* Local function prototypes */
 static int pack(byte_t* u_img, byte_t* p_img, int len, int threshold);
-
 
 int init_i_img_buffer(byte_t** i_img_buf, int x_size, int y_size, int n, i_mode_t mode) {
 	if (mode == INTERLEAVE_PACKED) {
@@ -29,8 +29,7 @@ int interleave(byte_t** img, byte_t* i_img, int n, int iw, int x_size, int y_siz
 	for (int i = 0, i_n = 0; i < n*x_size*y_size; i+=n*iw, i_n+=iw) {
 		for (int j = 0; j < n; j++) {
 			for (int k = 0; k < iw; k++) {
-				temp_result[i+j*iw+k] = img[j][i_n+k];
-				
+				temp_result[i+j*iw+k] = img[j][i_n+k];			
 			}
 		}
 	}
@@ -38,8 +37,10 @@ int interleave(byte_t** img, byte_t* i_img, int n, int iw, int x_size, int y_siz
 	int len;
 
 	if (mode == INTERLEAVE_PACKED) {
-		len = pack(temp_result, i_img, n*x_size*y_size, threshold);
+		/* The pack function assigns values to the interleaved image array */
+		len = test_pack(temp_result, i_img, n*x_size*y_size, threshold);
 	} else {
+		/* If no packing we need to assign the temp values to the interleaved image array */
 		for (int i = 0; i < n*x_size*y_size; i++) {
 			i_img[i] = temp_result[i];
 		} 
@@ -57,10 +58,17 @@ static int pack(byte_t* u_img, byte_t* p_img, int len, int threshold) {
 	for (int i = 0; i < len/8; i++) {
 		byte = 0;
 		for (int j = 0; j < 8; j++) {
-			pixel = (u_img[i*8 + j] >= threshold) ? 1 : 0;
-			byte |= (pixel << (7 - i));
+			pixel = (u_img[i*8+j] >= threshold) ? 1 : 0;
+			byte |= (pixel << (7-j));
 		}
 		p_img[i] = byte;
 	}
 	return len/8;
 }
+
+
+
+
+
+
+
