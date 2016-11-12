@@ -34,19 +34,26 @@
 *.dSYM/
 *.su
 
+# Image output files
+*.bmp
+
+# Dependency files
+*.d
+
 ytelse_usbhost
 build
+
 resources/mcu_output.txt
 resources/combine_image_sets
 resources/interleave
 resources/t10k-images-idx3-ubyte
 resources/train-images-idx3-ubyte
+resources/img_out
+
 interleave/interleave_test
 interleave/build
-*.bmp
-*.d
 interleave/.d/
 interleave/*.bmp
-interleave/img/
+interleave/img
 interleave/img/*.bmp
 interleave/mnist-ubyte-no-header
