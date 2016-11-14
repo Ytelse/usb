@@ -57,3 +57,7 @@ interleave/*.bmp
 interleave/img
 interleave/img/*.bmp
 interleave/mnist-ubyte-no-header
+
+usbspeedtest/build
+usbspeedtest/output
+usbspeedtest/usbspeed
