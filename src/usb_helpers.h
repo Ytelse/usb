@@ -16,6 +16,6 @@ int getDeviceName(libusb_device_handle* dev_handle, char* stringBuffer, int buff
 /* Send message buffer to device (denoted by handle) using bulk transfer */
 void sendAsyncMessage(libusb_device_handle* dev_handle, unsigned char* message, int msgSize);
 /* Receive data from device into buffer using bulk transfer */
-void receiveAsyncMessage(libusb_device_handle* dev_handle, unsigned char* buffer);
+void receiveAsyncMessage(libusb_device_handle* dev_handle, unsigned char* buffer, int buflen);
 
 #endif /* __USB_HELPERS_H_ */

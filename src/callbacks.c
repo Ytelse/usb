@@ -4,6 +4,7 @@
 /* Generic callbacks for MCU transfers */
 
 void LIBUSB_CALL mcu_dataReceivedCallback(struct libusb_transfer* transfer) {
+	debugprint("Data received!", RED);
 	libusb_free_transfer(transfer);
 	pendingReceive = false;
 }

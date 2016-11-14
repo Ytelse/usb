@@ -44,7 +44,7 @@ void sendAsyncMessage(libusb_device_handle* dev_handle, unsigned char* message, 
 
 /* Generic function for receiving data from the device spedified by dev_handle, endpoint defined by #define for convenience */
 
-void receiveAsyncMessage(libusb_device_handle* dev_handle, unsigned char* buffer) {
+void receiveAsyncMessage(libusb_device_handle* dev_handle, unsigned char* buffer, int buflen) {
 	struct libusb_transfer* transfer = NULL;
 	int rc;
 	//Allocate a transfer with 0 isochronous packages
@@ -55,7 +55,7 @@ void receiveAsyncMessage(libusb_device_handle* dev_handle, unsigned char* buffer
 		dev_handle, //device we want to receive from
 		EP_IN, //endpoint we want to receive from
 		buffer, //buffer we want to receive into
-		64, //packet size
+		buflen, //buffer length
 		&mcu_dataReceivedCallback,
 		NULL,
 		10000 //Unsure what timeout value we should set

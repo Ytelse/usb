@@ -8,7 +8,11 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <unistd.h>
+
+#include <time.h>
+#include <sys/time.h>
 
 #define OUTPUT_FP "resources/mcu_output.txt"
 
@@ -16,7 +20,7 @@ extern int _keepalive;
 extern barrier_t barrier;
 
 static unsigned char sendBuffer[512];
-static unsigned char receiveBuffer[512];
+static unsigned char receiveBuffer[4096*8];
 
 static unsigned char tickMessage[] = "tick";
 static int tickMessageLength = 4;
@@ -31,10 +35,9 @@ extern int _test;
 
 void * mcu_runloop(void* pdata_void_ptr) {
 
+	struct timeval start, end;
+
 	UNUSED(sendBuffer);
-	UNUSED(receiveBuffer);
-	UNUSED(tickMessage);
-	UNUSED(tickMessageLength);
 	UNUSED(countMessage);
 	UNUSED(countMessageLength);
 
@@ -52,34 +55,83 @@ void * mcu_runloop(void* pdata_void_ptr) {
 	/* Sync up with FPGA thread that is doing more heavy file I/O */
 	barrier_wait(&barrier);
 
-	int counter = 0;
+	int sendcounter = 0;
+	int recvcounter = 0;
+	int mcurecvcounter = 0;
+	memset(receiveBuffer, 0, 4096*8);
 
-	memset(receiveBuffer, 0, 512);
+	long int ms;
+	double s;
+
+	gettimeofday(&start, NULL);
 
 	while(_keepalive) {
 
-		if (pendingWrite) {
-			debugprint("Message waiting in send queue!", CYAN);
-		} else {
-			debugprint("Sending tick message.", GREEN);
-			sendAsyncMessage(pdata->dev_handle, tickMessage, tickMessageLength);
-		}
+		// if (pendingWrite) {
+		// 	debugprint("Message waiting in send queue!", CYAN);
+		// } else {
+		// 	debugprint("Sending tick message.", GREEN);
+		// 	sendAsyncMessage(pdata->dev_handle, tickMessage, tickMessageLength);
+		// 	sendcounter++;
+		// }
 
-		if (pendingReceive) {
-			debugprint("Still waiting for message!", MAGENTA);
-		} else {
-			debugprint("CONTENTS OF RECEIVEBUFFER:", BLUE);
-			printf("receiveBuffer = %s\n", receiveBuffer);
-			printf("counter = %d\n", counter);
-			debugprint("==================", BLUE);
-			debugprint("Setting up receive.", GREEN);
-			memset(receiveBuffer, 0, 512);
-			receiveAsyncMessage(pdata->dev_handle, receiveBuffer);
-		}
+		// if (pendingReceive) {
+		// 	debugprint("Still waiting for message!", MAGENTA);
+		// } else {
+		// 	debugprint("CONTENTS OF RECEIVEBUFFER:", BLUE);
+		// 	printf("receiveBuffer = %s\n", receiveBuffer);
+		// 	printf("counter = %d\n", counter);
+		// 	debugprint("==================", BLUE);
+		// 	debugprint("Setting up receive.", GREEN);
+		// 	memset(receiveBuffer, 0, 512);
+		// 	receiveAsyncMessage(pdata->dev_handle, receiveBuffer);
+		// 	recvcounter++;
+		// }
 
+		// if (!pendingWrite) {
+		// 	sendAsyncMessage(pdata->dev_handle, tickMessage, tickMessageLength);
+		// 	sendcounter++;
+		// }
+
+		if (!pendingReceive) {
+			fprintf(f, "%s\n", receiveBuffer);
+			//memset(receiveBuffer, 0, 512);
+			receiveAsyncMessage(pdata->dev_handle, receiveBuffer, 4096);
+			recvcounter++;
+		}
 		libusb_handle_events(pdata->context);
-		usleep(30000);
+		//usleep(30000);
+		gettimeofday(&end, NULL);
+		ms = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec));
+		s = ms/1e6;
+
+		if (s >= 1.0f) {
+			break;
+		} 
 	}
+
+	gettimeofday(&end, NULL);
+	ms = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec));
+    s = ms/1e6;
+
+    float msg_sent_per_sec = ((float) sendcounter / s);
+    float msg_recv_per_sec = ((float) recvcounter / s);
+    float total_per_sec = ((float) (sendcounter + recvcounter)) / s;
+
+    printf("========================================\n");
+    printf("Duration:                  %f\n", s);
+    printf("Messages sent:             %d\n", sendcounter);
+    printf("Messages received:         %d\n", recvcounter);
+    //printf("Last message received:     %s\n", mcuMsgBuf);
+    //printf("MCU receive counter:       %d\n", mcurecvcounter);
+    //printf("Messages sent/second:      %f\n", msg_sent_per_sec);
+    printf("Messages received/second:  %f\n", msg_recv_per_sec);
+    //printf("Total/second:              %f\n", total_per_sec);
+    printf("========================================\n");
+
+    while(_keepalive) {
+    	/* Do nothing */
+    }
 
 	debugprint("MCU_comm: Finished busy-wait. Closing open file.", DEFAULT);
 
