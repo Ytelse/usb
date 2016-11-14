@@ -83,7 +83,6 @@ int connect(libusb_context* context, libusb_device_handle** dev_handle, pacman_d
 
 	/* Claim a interface on the USB device */
 	while (state != USB_DEVICE_INTERFACE_CLAIMED) {
-		
 		rc = libusb_claim_interface(*dev_handle, *interface);
 
 		if (rc == LIBUSB_ERROR_NOT_FOUND) {

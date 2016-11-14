@@ -84,6 +84,7 @@ run : $(TARGET)
 $(TARGET) : $(OBJS)
 	@echo "$(YELLOW)Linking target: $@$(NO_COLOR)"
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
+	@echo "$(GREEN)==========================================$(NO_COLOR)"
 
 $(OBJDIR)/%.o : %.c | $(OBJDIR)
 	@echo "$(YELLOW)Compiling source: $@$(NO_COLOR)"

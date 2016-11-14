@@ -19,6 +19,8 @@ extern barrier_t barrier;
 
 void * fpga_runloop(void* pdata_void_ptr) {
 
+	// printf("Recompile\n");
+
 	/* Cast void ptr back to original type */
 	pdata_t* pdata = (pdata_t*) pdata_void_ptr;
 	UNUSED(pdata);
@@ -71,26 +73,26 @@ void * fpga_runloop(void* pdata_void_ptr) {
 
  	debugprint("FPGA_comm: Got past barrier!", GREEN);
 
- 	int img_num = 0;
+ 	// int img_num = 0;
 
  	byte_t *i_img_buf0, *i_img_buf1;
  	init_i_img_buffer(&i_img_buf0, IMG_X, IMG_Y, ITRLV_N, INTERLEAVE_UNPACKED);
  	init_i_img_buffer(&i_img_buf1, IMG_X, IMG_Y, ITRLV_N, INTERLEAVE_UNPACKED);
  	while (_keepalive) {
- 		/* Outupt some images just for testing */
- 		if (img_num < 20) {
- 			char filename[80];
- 			if (img_num % 2) {
- 				sprintf(filename, OUTPUT_PATH "image_%.4d_b0.bmp", img_num);
- 				interleave(&img[img_num*ITRLV_N], i_img_buf0, ITRLV_N, ITRLV_W, IMG_X, IMG_Y, INTERLEAVE_UNPACKED, THRESHOLD);
- 				output(filename, i_img_buf0, IMG_X*ITRLV_N, IMG_Y);
- 			} else {
- 				sprintf(filename, OUTPUT_PATH "image_%.4d_b1.bmp", img_num);
- 				interleave(&img[img_num*ITRLV_N], i_img_buf1, ITRLV_N, ITRLV_W, IMG_X, IMG_Y, INTERLEAVE_UNPACKED, THRESHOLD);
- 				output(filename, i_img_buf1, IMG_X*ITRLV_N, IMG_Y);
- 			}
- 		}
- 		img_num++;
+ 		// /* Outupt some images just for testing */
+ 		// if (img_num < ((20 < NOF_IMAGES) ? 20 : NOF_IMAGES)) {
+ 		// 	char filename[80];
+ 		// 	if (img_num % 2) {
+ 		// 		sprintf(filename, OUTPUT_PATH "image_%.4d_b0.bmp", img_num);
+ 		// 		interleave(&img[img_num*ITRLV_N], i_img_buf0, ITRLV_N, ITRLV_W, IMG_X, IMG_Y, INTERLEAVE_UNPACKED, THRESHOLD);
+ 		// 		output(filename, i_img_buf0, IMG_X*ITRLV_N, IMG_Y);
+ 		// 	} else {
+ 		// 		sprintf(filename, OUTPUT_PATH "image_%.4d_b1.bmp", img_num);
+ 		// 		interleave(&img[img_num*ITRLV_N], i_img_buf1, ITRLV_N, ITRLV_W, IMG_X, IMG_Y, INTERLEAVE_UNPACKED, THRESHOLD);
+ 		// 		output(filename, i_img_buf1, IMG_X*ITRLV_N, IMG_Y);
+ 		// 	}
+ 		// }
+ 		// img_num++;
  	};
 
  	debugprint("FPGA_comm: Finished busy-wait. Freeing images.", DEFAULT);

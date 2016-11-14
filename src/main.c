@@ -14,6 +14,9 @@
 #include <signal.h>
 #include <pthread.h>
 
+/* TODO: Remove following line */
+int _test;
+
 /* Global kill signal */
 volatile sig_atomic_t _kill;
 /* Thread keep-alive signal */
@@ -39,6 +42,9 @@ int main(void) {
 	signal(SIGINT, inthand);
 
 	print_startup_msg();
+	
+	/* TODO: Remove following line */
+	_test = 0;
 
 	libusb_context* context = NULL;
 	int rc = 0;
@@ -113,11 +119,10 @@ void mainloop(libusb_context* context) {
 				break;
 			case TESTING :
 				switch (state.test) {
-					case SEND_TEST : /* etc */
-					default :
-						state.test = NO_TEST;
-						break;
-
+				case SEND_TEST : /* etc */
+				default :
+					state.test = NO_TEST;
+					break;
 				}
 				break;
 			default :
@@ -296,6 +301,7 @@ void init_state(state_t* state) {
 void finalize(state_t state, libusb_device_handle* mcu_handle, libusb_device_handle* fpga_handle, int mcu_interface, int fpga_interface) {
 
 	if (state.usb_state == CONNECTED) {
+		
 		libusb_release_interface(mcu_handle, mcu_interface);
 		libusb_release_interface(fpga_handle, fpga_interface);
 		libusb_close(mcu_handle);
@@ -372,6 +378,11 @@ void* control_thread(void* void_ptr) {
 		cmd = commandloop();
 		if (cmd.command == STOP || _kill) {
 			_keepalive = 0;
+		/* TODO: Improve following */
+		} else if (cmd.command == TESTSEND) {
+			_test = 1;
+		} else if (cmd.command == TESTRECV) {
+			_test = 2;
 		} else {
 			printf("Only available command in run mode is 'stop'.\n");
 		}

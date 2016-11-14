@@ -23,6 +23,7 @@ typedef enum commands {
 	ART,				/* Print startup image */
 	QUIT,				/* Quit the program */
 	/* Test commands */
+	SETLEDS,
 	TESTSEND,		/* Send N messages to specified device */
 	TESTRECV,		/* Set up receive of N message from specified device */
 	TESTSENDRECV,	/* Send and set up receive of N message to/from specified device */
