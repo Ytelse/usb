@@ -89,6 +89,7 @@ void mainloop(libusb_context* context) {
 				switch(state.usb_state) {
 					case CONNECTING_ALL :
 						/* TODO: Connect to both devices */
+						/* For now just fall through to mcu connect */
 					case CONNECTING_MCU :
 						if (connect(context, &mcu_handle, PACMAN_MCU_DEVICE, &mcu_interface)) {
 							state.usb_state = DISCONNECTED;
@@ -117,14 +118,6 @@ void mainloop(libusb_context* context) {
 						run(state, context, mcu_handle, fpga_handle, mcu_interface, fpga_interface);
 				}
 				break;
-			case TESTING :
-				switch (state.test) {
-				case SEND_TEST : /* etc */
-				default :
-					state.test = NO_TEST;
-					break;
-				}
-				break;
 			default :
 				/* Do nothing */
 				state.cmd = commandloop();
@@ -147,7 +140,6 @@ void next_state(state_t* state) {
 	/* Copy values, cmd not needed as it will not change */
 	next.main_state = state->main_state;
 	next.usb_state = state->usb_state;
-	next.test = state->test;
 
 	switch (state->main_state) {
 		case INIT :
@@ -213,9 +205,6 @@ void next_state(state_t* state) {
 				case CONNECTED_MCU :
 					switch (state->cmd.command) {
 						/* TODO: Add all appropriate cases */
-						case TESTSEND :
-						case TESTRECV :
-						case TESTSENDRECV :
 						case RUN : /* TODO: Remove this, only for testing */ 
 							next.main_state = RUNNING;
 							break;
@@ -231,9 +220,6 @@ void next_state(state_t* state) {
 					break;
 				case CONNECTED_FPGA :
 					switch (state->cmd.command) {
-						case TESTSEND :
-						case TESTRECV :
-						case TESTSENDRECV :
 						case QUIT :
 							next.main_state = FINALIZE;
 							break;
@@ -285,7 +271,6 @@ void next_state(state_t* state) {
 	/* Copy values back */
 	state->main_state = next.main_state;
 	state->usb_state = next.usb_state;
-	state->test = next.test;
 
 }
 
@@ -294,14 +279,11 @@ void init_state(state_t* state) {
 	state->usb_state = DISCONNECTED;
 	state->cmd.command = INVALID_CMD;
 	state->cmd.target = PACMAN_NO_DEVICE;
-	state->cmd.N = -1;
-	state->test = NO_TEST;
 }
 
 void finalize(state_t state, libusb_device_handle* mcu_handle, libusb_device_handle* fpga_handle, int mcu_interface, int fpga_interface) {
 
-	if (state.usb_state == CONNECTED) {
-		
+	if (state.usb_state == CONNECTED) {	
 		libusb_release_interface(mcu_handle, mcu_interface);
 		libusb_release_interface(fpga_handle, fpga_interface);
 		libusb_close(mcu_handle);
@@ -376,13 +358,8 @@ void* control_thread(void* void_ptr) {
 
 	while (_keepalive) {
 		cmd = commandloop();
-		if (cmd.command == STOP || _kill) {
+		if (cmd.command == STOP) {
 			_keepalive = 0;
-		/* TODO: Improve following */
-		} else if (cmd.command == TESTSEND) {
-			_test = 1;
-		} else if (cmd.command == TESTRECV) {
-			_test = 2;
 		} else {
 			printf("Only available command in run mode is 'stop'.\n");
 		}
@@ -400,7 +377,6 @@ pacman_command_t commandloop() {
 	pacman_command_t cmd;
 	cmd.command = INVALID_CMD;
 	cmd.target = PACMAN_NO_DEVICE;
-	cmd.N = -1;
 
 	char stringBuffer[128]; //Unsafe, but who cares
 	memset(stringBuffer, 0, 64);

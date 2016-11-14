@@ -120,7 +120,7 @@ int connect(libusb_context* context, libusb_device_handle** dev_handle, pacman_d
 	debugprint("Successfully claimed USB device interface!", GREEN);
 
 	char nameBuffer[200];
-	int nameLength = getDeviceName(*dev_handle, nameBuffer, 200);
+	int nameLength = get_device_name(*dev_handle, nameBuffer, 200);
 	if (nameLength < 0) {
 		colorprint("WARNING: Failed to get device name.", YELLOW);
 	} else {

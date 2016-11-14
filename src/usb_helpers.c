@@ -13,7 +13,7 @@
 bool pendingWrite = false, pendingReceive = false;
 
 /* Generic function for sending data to the device spedified by dev_handle, endpoint defined by #define for convenience */
-void sendAsyncMessage(libusb_device_handle* dev_handle, unsigned char* message, int msgSize) {
+void send_async_transfer(libusb_device_handle* dev_handle, unsigned char* message, int msgSize) {
 	struct libusb_transfer* transfer = NULL;
 	int rc;
 	//Allocate a transfer with 0 isochronous packages
@@ -44,7 +44,7 @@ void sendAsyncMessage(libusb_device_handle* dev_handle, unsigned char* message, 
 
 /* Generic function for receiving data from the device spedified by dev_handle, endpoint defined by #define for convenience */
 
-void receiveAsyncMessage(libusb_device_handle* dev_handle, unsigned char* buffer, int buflen) {
+void recv_async_transfer(libusb_device_handle* dev_handle, unsigned char* buffer, int buflen) {
 	struct libusb_transfer* transfer = NULL;
 	int rc;
 	//Allocate a transfer with 0 isochronous packages
@@ -75,7 +75,7 @@ void receiveAsyncMessage(libusb_device_handle* dev_handle, unsigned char* buffer
 
 /* Returns length of name stored in stringBuffer, if return value < 0 the name fetching failed */
 /* Supplied buffer should be at least 200 bytes just to be sure */
-int getDeviceName(libusb_device_handle* dev_handle, char* stringBuffer, int bufferLength) {
+int get_device_name(libusb_device_handle* dev_handle, char* stringBuffer, int bufferLength) {
 		int rc = 0, mlength = 0, plength = 0;
 		unsigned char manufacturer[100], product[100]; //Just assume names are never longer than 100 chars
 		memset(manufacturer, 0, 100);

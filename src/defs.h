@@ -17,22 +17,17 @@ typedef enum commands {
 	/* Useful commands */
 	INVALID_CMD, 		/* No command selected */
 	CONNECT,			/* Connect to specified device(s) */
-	RUN,				/* Run full program specified by device */
-	STOP,				/* Stop whatever transactions are going on between host and given device */
+	RUN,				/* Run  */
+	STOP,				/* Stop whatever transactions are going on between host and given device (and return to command fetch loop) */
 	HELP, 				/* Print available commands */
 	ART,				/* Print startup image */
 	QUIT,				/* Quit the program */
-	/* Test commands */
-	SETLEDS,
-	TESTSEND,		/* Send N messages to specified device */
-	TESTRECV,		/* Set up receive of N message from specified device */
-	TESTSENDRECV,	/* Send and set up receive of N message to/from specified device */
+	TEST_CONNECTION		/* Test the connection to one or both devices */
 } cmd_t;
 
 typedef struct Command {
 	cmd_t command;
 	pacman_device_t target;
-	int N;
 } pacman_command_t;
 
 /* enum for main loop flow control */
@@ -43,8 +38,8 @@ typedef enum MainloopState {
 	CONNECTING,						/* Connect to one or more devices */
 	RUNNING,						/* Host is sending data to FPGA and receiving results from MCU */
 	STOPPING,						/* Halt the program without releasing devices and quitting */
-	TESTING,						/* Running some test function for a device */
 	GET_CMD,						/* Waiting for command input */
+	TESTING,						/* Testing connection to device(s) */
 	UNDEFINED						/* Undefined state */
 } main_state_t;
 
@@ -58,20 +53,10 @@ typedef enum USBState {
 	CONNECTING_MCU,					/* Attempting to connect to MCU */
 } usb_state_t;
 
-typedef enum Tests {
-	/* MCU tests, add more as needed */
-	SEND_TEST,
-	RECV_TEST,
-	SENDRECV_TEST,
-	/* Initial value */
-	NO_TEST
-} test_t;
-
 typedef struct State {
 	main_state_t main_state; /* State of mainloop */
 	usb_state_t usb_state;
 	pacman_command_t cmd;
-	test_t test;
 } state_t;
 
 typedef struct PthreadData {

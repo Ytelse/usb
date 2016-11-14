@@ -1,7 +1,6 @@
 #include "defs.h"
 #include "debug.h"
 #include "pthread_helper.h"
-#include "test_usb_functs.h"
 #include "usb_helpers.h"
 
 #include <string.h>
@@ -96,7 +95,7 @@ void * mcu_runloop(void* pdata_void_ptr) {
 		if (!pendingReceive) {
 			fprintf(f, "%s\n", receiveBuffer);
 			//memset(receiveBuffer, 0, 512);
-			receiveAsyncMessage(pdata->dev_handle, receiveBuffer, 4096);
+			recv_async_transfer(pdata->dev_handle, receiveBuffer, 4096);
 			recvcounter++;
 		}
 		libusb_handle_events(pdata->context);

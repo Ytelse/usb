@@ -45,7 +45,6 @@ callbacks.c \
 cmd_parser.c \
 debug.c \
 main.c \
-test_usb_functs.c \
 usb_helpers.c \
 pacman_comm_setup.c \
 mcu_comm.c \

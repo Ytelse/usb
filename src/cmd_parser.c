@@ -12,17 +12,6 @@ pacman_command_t parse_cmd(char* string) {
 
 	cmd.command = INVALID_CMD;
 	cmd.target = PACMAN_NO_DEVICE;
-	cmd.N = -1;
-
-	/* TODO: Handle 'connect <target>' where target can be <none> (meaning both), mcu or fpga */
-	/* TODO: Handle 'run <target>'	   -- 							*						 */
-	/* TODO: Handle 'stop <target>'    --							*						 */
-	/* TODO: Handle 'help' */
-	/* TODO: Handle 'quit' */
-	/* TODO: Handle 'send <target> n'     where target can be mcu or fpga */
-	/* TODO: Handle 'recv <target> n'     --				*		   -- */
-	/* TODO: Handle 'sendrecv <target> n' --				*		   -- */
-
 	/* Handle the easy cases first */
 
 	if (strcmp(string, "help") == 0) {
@@ -35,7 +24,7 @@ pacman_command_t parse_cmd(char* string) {
 		cmd.command = QUIT;
 	} else {
 		char* saveptr; /* Pointer required by strtok_r */
-		char *_cmd, *_target, *_amount; /* Pointers to the string tokens we want */
+		char *_cmd, *_target; /* Pointers to the string tokens we want */
 
 		_cmd = strtok_r(string, " ", &saveptr); /* Get first space seperated token from 'string' */
 
@@ -64,40 +53,13 @@ pacman_command_t parse_cmd(char* string) {
 					} else {
 						cmd.target = PACMAN_FPGA_DEVICE;
 					}
-				} else { /* Command is one of send / recv / sendrecv, and we need to get amount as well */
-					_amount = strtok_r(NULL, " ", &saveptr);
-					if (_amount != NULL) {
-						cmd.N = strtol(_amount, NULL, 10);
+				} else if (strcmp(_cmd, "test") == 0) {
+					cmd.command = TEST_CONNECTION;
+					if (strcmp(_target, "mcu") == 0) {
+						cmd.target = PACMAN_MCU_DEVICE;
 					} else {
-						cmd.N = 1;
+						cmd.target = PACMAN_FPGA_DEVICE;
 					}
-
-					if (strcmp(_cmd, "send") == 0) {
-							cmd.command = TESTSEND;
-							if (strcmp(_target, "mcu") == 0) {
-								cmd.target = PACMAN_MCU_DEVICE;
-							} else {
-								cmd.target = PACMAN_FPGA_DEVICE;
-							}
-						} else if (strcmp(_cmd, "recv") == 0) {
-							cmd.command = TESTRECV;
-							if (strcmp(_target, "mcu") == 0) {
-								cmd.target = PACMAN_MCU_DEVICE;
-							} else {
-								cmd.target = PACMAN_FPGA_DEVICE;
-							}
-						} else if (strcmp(_cmd, "sendrecv") == 0) {
-							cmd.command = TESTSENDRECV;
-							if (strcmp(_target, "mcu") == 0) {
-								cmd.target = PACMAN_MCU_DEVICE;
-							} else {
-								cmd.target = PACMAN_FPGA_DEVICE;
-							}
-						} else {
-							cmd.command = INVALID_CMD;
-							cmd.target = PACMAN_NO_DEVICE;
-							cmd.N = -1;
-						}/* If none of these, it's an invalid command */
 				} 
 			} else { /* If no target, a valid command refers to both devices */
 				cmd.target = PACMAN_BOTH_DEVICES;
@@ -107,10 +69,11 @@ pacman_command_t parse_cmd(char* string) {
 					cmd.command = STOP;
 				} else if (strcmp(_cmd, "connect") == 0) {
 					cmd.command = CONNECT;
+				} else if (strcmp(_cmd, "test") == 0) {
+					cmd.command = TEST_CONNECTION;
 				} else {
 					cmd.command = INVALID_CMD;
 					cmd.target = PACMAN_NO_DEVICE;
-					cmd.N = -1;
 				}/* If not one of these, just return INVALID_CMD */
 			}
 		}
