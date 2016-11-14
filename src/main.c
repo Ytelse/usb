@@ -71,7 +71,7 @@ void mainloop(libusb_context* context) {
 	init_state(&state);
 	
 	/* Return codes */
-	//int rc = 0;
+	int rc = 0;
 
 	/* Device handles */
 	libusb_device_handle *mcu_handle, *fpga_handle; mcu_handle = fpga_handle = NULL;
@@ -116,6 +116,24 @@ void mainloop(libusb_context* context) {
 					case PACMAN_BOTH_DEVICES :
 					default :
 						run(state, context, mcu_handle, fpga_handle, mcu_interface, fpga_interface);
+				}
+				break;
+			case TESTING :
+				/* Test connection to specified device by sending one transfer and expect one back */
+				switch (state.cmd.target) {
+					case PACMAN_MCU_DEVICE :
+						rc = test_connection(mcu_handle, NULL, PACMAN_MCU_DEVICE);
+					case PACMAN_FPGA_DEVICE : 
+						rc = test_connection(NULL, fpga_handle, PACMAN_FPGA_DEVICE);
+					case PACMAN_BOTH_DEVICES :
+						rc = test_connection(mcu_handle, fpga_handle, PACMAN_BOTH_DEVICES);
+					default :
+						rc = test_connection(mcu_handle, NULL, PACMAN_MCU_DEVICE);
+				}
+				if (rc) {
+					colorprint("ERROR: Connection test failed!", RED);
+				} else {
+					colorprint("Connection OK!", GREEN);
 				}
 				break;
 			default :
@@ -189,7 +207,9 @@ void next_state(state_t* state) {
 						case RUN :
 							next.main_state = RUNNING;
 							break;
-						case STOP :
+						case TEST_CONNECTION:
+							next.main_state = TESTING;
+							break;
 						case CONNECT : /* In case connect to 1 device and want to connect other */
 						case QUIT :
 							next.main_state = FINALIZE;
@@ -208,6 +228,8 @@ void next_state(state_t* state) {
 						case RUN : /* TODO: Remove this, only for testing */ 
 							next.main_state = RUNNING;
 							break;
+						case TEST_CONNECTION:
+							next.main_state = TESTING;
 						case QUIT :
 							next.main_state = FINALIZE;
 							break;
@@ -222,6 +244,9 @@ void next_state(state_t* state) {
 					switch (state->cmd.command) {
 						case QUIT :
 							next.main_state = FINALIZE;
+							break;
+						case TEST_CONNECTION :
+							next.main_state = TESTING;
 							break;
 						case HELP :
 							print_help_string();

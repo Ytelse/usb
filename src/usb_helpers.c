@@ -12,8 +12,15 @@
 
 bool pendingWrite = false, pendingReceive = false;
 
+static const byte_t test_msg[] = "test";
+static const int test_msg_len = 4;
+static byte_t test_recv[2];
+
+/* Local function prototype */
+static int _test_connection(libusb_device_handle* dev_handle);
+
 /* Generic function for sending data to the device spedified by dev_handle, endpoint defined by #define for convenience */
-void send_async_transfer(libusb_device_handle* dev_handle, unsigned char* message, int msgSize) {
+void send_async_transfer(libusb_device_handle* dev_handle, unsigned char* message, int msgSize, int timeout) {
 	struct libusb_transfer* transfer = NULL;
 	int rc;
 	//Allocate a transfer with 0 isochronous packages
@@ -25,9 +32,10 @@ void send_async_transfer(libusb_device_handle* dev_handle, unsigned char* messag
 		EP_OUT,
 		message,
 		msgSize,
+		/* TODO: Fix the callback */
 		&mcu_dataSentCallback,
 		NULL,
-		1000 //Unsure what timeout value we should set
+		timeout //Unsure what timeout value we should set
 	);
 
 	rc = libusb_submit_transfer(transfer);
@@ -44,7 +52,7 @@ void send_async_transfer(libusb_device_handle* dev_handle, unsigned char* messag
 
 /* Generic function for receiving data from the device spedified by dev_handle, endpoint defined by #define for convenience */
 
-void recv_async_transfer(libusb_device_handle* dev_handle, unsigned char* buffer, int buflen) {
+void recv_async_transfer(libusb_device_handle* dev_handle, unsigned char* buffer, int buflen, int timeout) {
 	struct libusb_transfer* transfer = NULL;
 	int rc;
 	//Allocate a transfer with 0 isochronous packages
@@ -56,9 +64,10 @@ void recv_async_transfer(libusb_device_handle* dev_handle, unsigned char* buffer
 		EP_IN, //endpoint we want to receive from
 		buffer, //buffer we want to receive into
 		buflen, //buffer length
+		/* TODO: Fix the callback */
 		&mcu_dataReceivedCallback,
 		NULL,
-		10000 //Unsure what timeout value we should set
+		timeout //Unsure what timeout value we should set
 	);
 
 	rc = libusb_submit_transfer(transfer);
@@ -175,3 +184,33 @@ void get_device_names(libusb_context* context) {
 	}
 	libusb_free_device_list(device_list, 1);
 }
+
+int test_connection(libusb_device_handle* mcu_handle, libusb_device_handle* fpga_handle, pacman_device_t device) {
+	int rc0, rc1; rc0 = rc1 = 0;
+	switch (device) {
+		case PACMAN_MCU_DEVICE :
+			rc0 = _test_connection(mcu_handle);
+			break;
+		case PACMAN_FPGA_DEVICE :
+			rc1 = _test_connection(fpga_handle);
+			break;
+		case PACMAN_BOTH_DEVICES :
+			rc0 = _test_connection(mcu_handle);
+			rc1 = _test_connection(fpga_handle);
+			break;
+		case PACMAN_NO_DEVICE :
+			return 1;
+	}
+
+	return rc0 || rc1;
+
+
+}
+
+static int _test_connection(libusb_device_handle* dev_handle) {
+	memset(test_recv, 0, 2);
+	send_async_transfer(dev_handle, test_msg, test_msg_len, 1000);
+	recv_async_transfer(dev_handle, test_recv, 2, 1000);
+
+	/* TODO: Finish this */
+} 
