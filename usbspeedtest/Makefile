@@ -57,13 +57,14 @@ vpath %.c $(C_PATHS)
 # BUILD RULES
 ################
 
-.PHONY : debug
-debug : CFLAGS += -DDEBUG
-debug : $(TARGET)
+.PHONY : mcu fpga run clean
+mcu : clean
+mcu : CFLAGS += -DMCU
+mcu : $(TARGET)
 
-.PHONY : nodebug
-nodebug : CFLAGS += -DNDEBUG
-nodebug : $(TARGET)
+fpga : clean
+fpga : CFLAGS += -DNDEBUG
+fpga : $(TARGET)
 
 .PHONY : run
 run : $(TARGET)
@@ -81,6 +82,5 @@ $(OBJDIR)/%.o : %.c | $(OBJDIR)
 $(OBJDIR) :
 	mkdir $@
 
-.PHONY : clean
 clean :
 	-rm -rf $(OBJDIR) $(TARGET)

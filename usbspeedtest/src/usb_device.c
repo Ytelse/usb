@@ -3,14 +3,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#define UNUSED(x) (void)x
+#define UNUSED(x) (void) x
 
 static int getDeviceName(libusb_device_handle* dev_handle, char* stringBuffer, int bufferLength);
 
 int connect(libusb_context* context, libusb_device_handle** dev_handle, int interface) {
-	int rc;
-	UNUSED(rc);
-
 	libusb_device** device_list = NULL;
 	libusb_device* efm_dev = NULL;
 
