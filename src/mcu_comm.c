@@ -30,7 +30,6 @@ static int countMessageLength = 5;
 extern bool pendingWrite;
 extern bool pendingReceive;
 
-extern int _test;
 
 void * mcu_runloop(void* pdata_void_ptr) {
 

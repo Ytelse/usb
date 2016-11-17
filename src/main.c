@@ -14,9 +14,6 @@
 #include <signal.h>
 #include <pthread.h>
 
-/* TODO: Remove following line */
-int _test;
-
 /* Global kill signal */
 volatile sig_atomic_t _kill;
 /* Thread keep-alive signal */
@@ -42,9 +39,6 @@ int main(void) {
 	signal(SIGINT, inthand);
 
 	print_startup_msg();
-	
-	/* TODO: Remove following line */
-	_test = 0;
 
 	libusb_context* context = NULL;
 	int rc = 0;
