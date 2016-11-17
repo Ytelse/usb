@@ -95,7 +95,7 @@ void * mcu_runloop(void* pdata_void_ptr) {
 		if (!pendingReceive) {
 			fprintf(f, "%s\n", receiveBuffer);
 			//memset(receiveBuffer, 0, 512);
-			recv_async_transfer(pdata->dev_handle, receiveBuffer, 4096);
+			recv_async_transfer(pdata->dev_handle, receiveBuffer, 4096, 1000);
 			recvcounter++;
 		}
 		libusb_handle_events(pdata->context);
