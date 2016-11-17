@@ -14,7 +14,7 @@
 
 #define UNUSED(x) (void) x
 
-#define DBG_OUTPUT_FP "data_received.txt"
+#define DBG_OUTPUT_FP "dbg_out.txt"
 
 #define RECVTIMEOUT 1000
 #define SENDTIMEOUT 1000
@@ -22,7 +22,7 @@
 #define BUFFERSIZE_R 4096*4
 #define BUFFERSIZE_S 4096
 
-#define TEST_DURATION 1.0f
+#define TEST_DURATION 2.0f
 
 enum {SEND, RECV, BOTH};
 
@@ -102,7 +102,7 @@ static void recvtest(libusb_context* context, libusb_device_handle* dev_handle, 
 	long int ms;
 	double s;
 	int recvcount, loopcount, sync_xferred;
-
+	fprintf(fout, "                        ASYNC\n");
 	/* Async receive test */
 	recvcount = loopcount = sync_xferred = 0;
 	memset(usb_recv_buffer, 0, BUFFERSIZE_R);
@@ -127,7 +127,7 @@ static void recvtest(libusb_context* context, libusb_device_handle* dev_handle, 
 	}
 
 	recvdbgoutput(fout, s, recvcount, loopcount, sync_xferred);
-
+	fprintf(fout, "                        SYNC\n");
 	/* Sync receive test */
 	recvcount = loopcount = sync_xferred = 0;
 	memset(usb_recv_buffer, 0, BUFFERSIZE_R);
@@ -166,7 +166,7 @@ static void sendtest(libusb_context* context, libusb_device_handle* dev_handle, 
 	gettimeofday(&start, NULL);
 
 	/* Async send test */
-
+	fprintf(fout, "                        ASYNC\n");
 	while (true) {
 		loopcount++;
 
@@ -188,7 +188,7 @@ static void sendtest(libusb_context* context, libusb_device_handle* dev_handle, 
 	senddbgoutput(fout, s, sendcount, loopcount, sync_xferred);
 
 	/* Sync send test */
-
+	fprintf(fout, "                        SYNC\n");
 	sendcount = loopcount = sync_xferred = 0;
 	gettimeofday(&start, NULL);
 
