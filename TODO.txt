@@ -12,6 +12,12 @@
 	- Send start signal
 	- Send stop signal
 
+* Add documentation for entire codebase!
+	- Not necessary to explain how everything works (only if it does something very hacky)
+	  but ensure that every functions has a line or two about _what_ it does.
+
+* TODO: Add more TODO items to this list.
+
 ==== IF WE HAVE TIME ====
 
 * Make the program more portable. Especially the Makefile
