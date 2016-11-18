@@ -1,0 +1,17 @@
+==== USB HOST TODOLIST ====
+
+* MCU thread:
+	- Read data stream from MCU
+	- Send start signal
+	- Send stop signal
+	- mmap() output file?
+
+* FPGA thread:
+	- Send data stream to FPGA
+	- mmap() dataset
+	- Send start signal
+	- Send stop signal
+
+==== IF WE HAVE TIME ====
+
+* Make the program more portable. Especially the Makefile
