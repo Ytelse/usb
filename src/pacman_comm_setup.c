@@ -11,8 +11,8 @@
 #define MCU_VENDOR_ID 0x10c4
 #define MCU_PRODUCT_ID 0x0007
 
-#define FPGA_VENDOR_ID 0x0000 /* TODO: Add real IDs */
-#define FPGA_PRODUCT_ID 0x0000
+#define FPGA_VENDOR_ID 0x4ac3
+#define FPGA_PRODUCT_ID 0xa200
 
 /* Number of attempts before giving up trying to connect to device */
 #define ATTEMPT_LIMIT 10
@@ -179,7 +179,49 @@ int get_ytelse_mcu_handle(libusb_context* context, libusb_device_handle** dev_ha
 }
 
 int get_ytelse_fpga_handle(libusb_context* context, libusb_device_handle** dev_handle) {
-	/* PLACEHOLDE */
-	colorprint("ERROR: Not yet supported!", RED);
-	return PACMAN_DEVICE_NOT_FOUND;
+
+	libusb_device** device_list = NULL;
+	libusb_device* efm_dev = NULL;
+	ssize_t count = 0;
+	int rc = 0;
+
+	count = libusb_get_device_list(context, &device_list);
+	if (count < 0) {
+		colorprint("FATAL ERROR: USB Device list has fewer than 0 entries!", RED);
+		return PACMAN_DEVICE_NOT_FOUND;
+	}
+
+	for (size_t i = 0; i < count; i++) {
+		libusb_device* device = device_list[i];
+		struct libusb_device_descriptor desc;
+
+		rc = libusb_get_device_descriptor(device, &desc);
+		if (rc) {continue;} //Fail quitely, we will keep trying from main loop
+
+		if (desc.idVendor == FPGA_VENDOR_ID && desc.idProduct == FPGA_PRODUCT_ID) {
+			efm_dev = device;
+		}
+
+		if (_kill) {
+			break;
+		}
+
+	}
+
+	if (!efm_dev) {
+		debugprint("Could not find PACMAN FPGA USB device.", RED);
+		return PACMAN_DEVICE_NOT_FOUND;
+	}
+
+	rc = libusb_open(efm_dev, dev_handle);
+	if (rc) {
+		libusb_free_device_list(device_list, 1);
+		debugprint("Failed to open PACMAN FPGA USB device!", RED);
+		return PACMAN_DEVICE_USB_OPEN_FAILURE;
+	}
+
+	libusb_free_device_list(device_list, 1);
+	return PACMAN_DEVICE_USB_OPEN_SUCCESS;
+
+
 }
