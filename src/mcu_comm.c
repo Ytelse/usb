@@ -112,6 +112,10 @@ void * mcu_runloop(void* pdata_void_ptr) {
 		} 
 	}
 
+	/* _keepalive should be 0 at this point, so send the stop signal */
+	unsigned char stop_msg[] = "stop";
+	send_async_transfer(pdata->dev_handle, stop_msg, 4*sizeof(char), 1000);
+
 	gettimeofday(&end, NULL);
 	ms = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec));
     s = ms/1e6;
