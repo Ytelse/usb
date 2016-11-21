@@ -6,6 +6,8 @@
 
 extern bool pendingWrite, pendingReceive;
 
+extern int* result_buffer;
+
 /* Generic callbacks for MCU transfers */
 
 void LIBUSB_CALL mcu_dataReceivedCallback(struct libusb_transfer* transfer);
