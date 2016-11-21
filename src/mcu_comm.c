@@ -50,6 +50,10 @@ void * mcu_runloop(void* pdata_void_ptr) {
 		return NULL;
 	}
 
+	/* Send start message */
+	unsigned char start_msg[] = "start";
+	send_async_transfer(pdata->dev_handle, start_msg, 5*sizeof(char), 1000);
+
 	/* Sync up with FPGA thread that is doing more heavy file I/O */
 	barrier_wait(&barrier);
 
