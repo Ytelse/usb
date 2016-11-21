@@ -6,7 +6,7 @@
 
 extern bool pendingWrite, pendingReceive;
 
-extern int** result_buffer;
+extern unsigned char* result_buffer;
 
 /* Generic callbacks for MCU transfers */
 

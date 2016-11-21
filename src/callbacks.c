@@ -6,7 +6,10 @@ int buffer_counter = 0;
 
 void LIBUSB_CALL mcu_dataReceivedCallback(struct libusb_transfer* transfer) {
 	debugprint("Data received!", RED);
-	result_buffer[buffer_counter++] = (int) transfer->buffer;
+	/* There are 4096 bytes, we store them in 1 byte increments*/
+	for(size_t i = 0; i < 4096; i++) {
+	  result_buffer[buffer_counter++] = (unsigned char) transfer->buffer[i];
+	}
 	libusb_free_transfer(transfer);
 	pendingReceive = false;
 }

@@ -22,7 +22,7 @@ volatile int _keepalive;
 /* Thread barrier for synchronizing */
 barrier_t barrier;
 
-int** result_buffer;
+unsigned char* result_buffer;
 
 void inthand(int signum) {
     _kill = 1;
@@ -55,11 +55,7 @@ int main(void) {
 
 	libusb_set_debug(NULL, 3); //Set max debug level
 
-	result_buffer = (int**)malloc(NOF_IMAGES * sizeof(int));
-	for (int i = 0; i < NOF_IMAGES; i++) {
-	  result_buffer[i] = (int*)malloc(4096 * sizeof(int));
-	}
-
+	result_buffer = (unsigned char*)malloc(NOF_IMAGES * IMG_SIZE * sizeof(unsigned char));
 
 	mainloop(context);
 

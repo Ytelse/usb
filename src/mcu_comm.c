@@ -125,10 +125,8 @@ void * mcu_runloop(void* pdata_void_ptr) {
 	  printf("ERROR: Failed to open output file\n");
 	}
 
-	for(int i = 0; i < NOF_IMAGES; i++) {
-	  for(int j = 0; j < 4096; j++) {
-	    putc(result_buffer[i][j], f);
-	  }
+	for(int i = 0; i < NOF_IMAGES*IMG_SIZE; i++) {
+	  putc(result_buffer[i], f);
 	}
 
 	fclose(f);
