@@ -91,12 +91,12 @@ void mainloop(libusb_context* context) {
 
 	state.usb_state = CONNECTED_MCU;
 
-	/* if (connect(context, &fpga_handle, PACMAN_FPGA_DEVICE, &fpga_interface)) { */
-	/*   puts("EXIT PROGRAM: Error connecting to FPGA"); */
-	/*   exit(1); */
-	/* } */
+	if (connect(context, &fpga_handle, PACMAN_FPGA_DEVICE, &fpga_interface)) {
+	  puts("EXIT PROGRAM: Error connecting to FPGA");
+	  exit(1);
+	}
 
-	/* state.usb_state = CONNECTED; */
+	state.usb_state = CONNECTED;
 
 	run(state, context, mcu_handle, fpga_handle, mcu_interface, fpga_interface);
 
@@ -140,10 +140,10 @@ int run(state_t state, libusb_context* context, libusb_device_handle* mcu_handle
 	pdata_t fpga_data, mcu_data;
 
 	/* Initialize structs */
-	/* fpga_data.state = &state; */
-	/* fpga_data.context = context; */
-	/* fpga_data.dev_handle = fpga_handle; */
-	/* fpga_data.dev_interface = &fpga_interface; */
+	fpga_data.state = &state;
+	fpga_data.context = context;
+	fpga_data.dev_handle = fpga_handle;
+	fpga_data.dev_interface = &fpga_interface;
 
 	mcu_data.state = &state;
 	mcu_data.context = context;
@@ -151,16 +151,16 @@ int run(state_t state, libusb_context* context, libusb_device_handle* mcu_handle
 	mcu_data.dev_interface = &mcu_interface;
 
 	/* Initialize barrier(s) */
-	barrier_init(&barrier, 2);
+	barrier_init(&barrier, 3);
 
 	debugprint("Creating threads...", DEFAULT);
 
 	/* Spawn FPGA thread */
-	/* rc = pthread_create(&fpga_thread, NULL, fpga_runloop, (void*)&fpga_data); */
-	/* if (rc) { */
-	/* 	colorprint("ERROR: pthread_create() failed!", RED); */
-	/* 	return rc; */
-	/* } */
+	rc = pthread_create(&fpga_thread, NULL, fpga_runloop, (void*)&fpga_data);
+	if (rc) {
+		colorprint("ERROR: pthread_create() failed!", RED);
+		return rc;
+	}
 	/* Spawn MCU thread */
 	rc = pthread_create(&mcu_thread, NULL, mcu_runloop, (void*)&mcu_data);
 	if (rc) {
@@ -174,7 +174,7 @@ int run(state_t state, libusb_context* context, libusb_device_handle* mcu_handle
 		return rc;
 	}
 
-	/* pthread_join(fpga_thread, NULL); */
+	pthread_join(fpga_thread, NULL);
 	pthread_join(mcu_thread, NULL);
 	pthread_join(ctrl_thread, NULL);
 
