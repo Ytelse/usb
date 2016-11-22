@@ -25,7 +25,8 @@ void send_async_transfer(libusb_device_handle* dev_handle, unsigned char* messag
 	int rc;
 	//Allocate a transfer with 0 isochronous packages
 	transfer = libusb_alloc_transfer(0);
-
+	pendingWrite = true;
+	debugprint("Trying to send a message...", YELLOW);
 	libusb_fill_bulk_transfer(
 		transfer,
 		dev_handle,
@@ -39,14 +40,17 @@ void send_async_transfer(libusb_device_handle* dev_handle, unsigned char* messag
 	);
 
 	rc = libusb_submit_transfer(transfer);
-	if (rc == LIBUSB_ERROR_NO_DEVICE) {
+	if (rc == 0) {
+	  /* pendingWrite = true; */
+	}else if (rc == LIBUSB_ERROR_NO_DEVICE) {
 		debugprint("Device has disconnected!", RED);
 	} else if (rc == LIBUSB_ERROR_BUSY) {
 		debugprint("transfer already submitted!", YELLOW);
 	} else if (rc == LIBUSB_ERROR_NOT_SUPPORTED){
 		debugprint("Transfer flags not supported!", RED);
 	} else {
-		pendingWrite = true;
+	  // lol no
+	  debugprint("Error has occured while sending ...", RED);
 	}
 }
 
@@ -57,7 +61,7 @@ void recv_async_transfer(libusb_device_handle* dev_handle, unsigned char* buffer
 	int rc;
 	//Allocate a transfer with 0 isochronous packages
 	transfer = libusb_alloc_transfer(0);
-
+	pendingReceive = true;
 	libusb_fill_bulk_transfer(
 		transfer, //transfer struct pointer
 		dev_handle, //device we want to receive from
@@ -79,7 +83,7 @@ void recv_async_transfer(libusb_device_handle* dev_handle, unsigned char* buffer
 		
 	}
 
-	pendingReceive = true;
+	/* pendingReceive = true; */
 }
 
 /* Returns length of name stored in stringBuffer, if return value < 0 the name fetching failed */

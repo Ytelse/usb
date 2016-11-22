@@ -14,6 +14,7 @@
 #include <signal.h>
 #include <pthread.h>
 #include <i_defs.h>
+#include <stdbool.h>
 
 /* Global kill signal */
 volatile sig_atomic_t _kill;
@@ -38,12 +39,15 @@ void* control_thread(void* void_ptr);
 
 int main(void) {
 	/* Handle ctrl-c gracefully */
-	signal(SIGINT, inthand);
+	/* signal(SIGINT, inthand); */
 
 	print_startup_msg();
 
 	libusb_context* context = NULL;
 	int rc = 0;
+
+	/* Remove older output if it exists */
+	remove("out_result");
 
 	/* Initialize libusb */
 	debugprint("Initializing libusb...", DEFAULT);
@@ -59,7 +63,11 @@ int main(void) {
 
 	mainloop(context);
 
+	free(result_buffer);
+
 	libusb_exit(context);
+
+	return 0;
 }
 
 void mainloop(libusb_context* context) {
@@ -69,8 +77,12 @@ void mainloop(libusb_context* context) {
 	init_state(&state);
 
 	/* Device handles */
-	libusb_device_handle *mcu_handle, *fpga_handle; mcu_handle = fpga_handle = NULL;
-	int mcu_interface, fpga_interface; mcu_interface = fpga_interface = 0;
+	libusb_device_handle *mcu_handle, *fpga_handle;
+	mcu_handle = NULL;
+	fpga_handle = NULL;
+	int mcu_interface, fpga_interface;
+	mcu_interface = 0;
+	fpga_interface = 0;
 
 	if (connect(context, &mcu_handle, PACMAN_MCU_DEVICE, &mcu_interface)) {
 	  puts("EXIT PROGRAM: Error connecting to MCU");
@@ -79,12 +91,12 @@ void mainloop(libusb_context* context) {
 
 	state.usb_state = CONNECTED_MCU;
 
-	if (connect(context, &fpga_handle, PACMAN_FPGA_DEVICE, &fpga_interface)) {
-	  puts("EXIT PROGRAM: Error connecting to FPGA");
-	  exit(1);
-	}
+	/* if (connect(context, &fpga_handle, PACMAN_FPGA_DEVICE, &fpga_interface)) { */
+	/*   puts("EXIT PROGRAM: Error connecting to FPGA"); */
+	/*   exit(1); */
+	/* } */
 
-	state.usb_state = CONNECTED;
+	/* state.usb_state = CONNECTED; */
 
 	run(state, context, mcu_handle, fpga_handle, mcu_interface, fpga_interface);
 
@@ -128,10 +140,10 @@ int run(state_t state, libusb_context* context, libusb_device_handle* mcu_handle
 	pdata_t fpga_data, mcu_data;
 
 	/* Initialize structs */
-	fpga_data.state = &state;
-	fpga_data.context = context;
-	fpga_data.dev_handle = fpga_handle;
-	fpga_data.dev_interface = &fpga_interface;
+	/* fpga_data.state = &state; */
+	/* fpga_data.context = context; */
+	/* fpga_data.dev_handle = fpga_handle; */
+	/* fpga_data.dev_interface = &fpga_interface; */
 
 	mcu_data.state = &state;
 	mcu_data.context = context;
@@ -139,16 +151,16 @@ int run(state_t state, libusb_context* context, libusb_device_handle* mcu_handle
 	mcu_data.dev_interface = &mcu_interface;
 
 	/* Initialize barrier(s) */
-	barrier_init(&barrier, 3);
+	barrier_init(&barrier, 2);
 
 	debugprint("Creating threads...", DEFAULT);
 
 	/* Spawn FPGA thread */
-	rc = pthread_create(&fpga_thread, NULL, fpga_runloop, (void*)&fpga_data);
-	if (rc) {
-		colorprint("ERROR: pthread_create() failed!", RED);
-		return rc;
-	}
+	/* rc = pthread_create(&fpga_thread, NULL, fpga_runloop, (void*)&fpga_data); */
+	/* if (rc) { */
+	/* 	colorprint("ERROR: pthread_create() failed!", RED); */
+	/* 	return rc; */
+	/* } */
 	/* Spawn MCU thread */
 	rc = pthread_create(&mcu_thread, NULL, mcu_runloop, (void*)&mcu_data);
 	if (rc) {
@@ -162,7 +174,7 @@ int run(state_t state, libusb_context* context, libusb_device_handle* mcu_handle
 		return rc;
 	}
 
-	pthread_join(fpga_thread, NULL);
+	/* pthread_join(fpga_thread, NULL); */
 	pthread_join(mcu_thread, NULL);
 	pthread_join(ctrl_thread, NULL);
 
@@ -170,6 +182,7 @@ int run(state_t state, libusb_context* context, libusb_device_handle* mcu_handle
 	return 0;
 }
 
+extern bool pendingReceive;
 /* A thread used only for being able to stop the other two threads. Not very pretty. */
 void* control_thread(void* void_ptr) {
 	pacman_command_t cmd;
@@ -221,6 +234,7 @@ pacman_command_t commandloop() {
 
 		if (cmd.command == INVALID_CMD) {
 			printf("Invalid command, try 'help'.\n");
+			printf("pendingRecv: %d, keepalive: %d \n", pendingReceive, _keepalive);
 		}
 	}
 

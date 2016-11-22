@@ -57,80 +57,36 @@ void * mcu_runloop(void* pdata_void_ptr) {
 
 	/* Send start message */
 	unsigned char start_msg[] = "start";
-	send_async_transfer(pdata->dev_handle, start_msg, 5*sizeof(unsigned char), 1000);
+	send_async_transfer(pdata->dev_handle, start_msg, 5*sizeof(unsigned char), 10000);
+	/* Wait until the message is received on the other end */
+	while(pendingWrite) {
+	  libusb_handle_events(pdata->context);
+	}
 
 
 	int sendcounter = 0;
 	int recvcounter = 0;
 	int mcurecvcounter = 0;
-	memset(receiveBuffer, 0, 4096*8);
+	memset(receiveBuffer, 0, 4096*4);
 
 	long int ms;
 	double s;
 
+
 	gettimeofday(&start, NULL);
 
 	while(_keepalive) {
-
-		// if (pendingWrite) {
-		// 	debugprint("Message waiting in send queue!", CYAN);
-		// } else {
-		// 	debugprint("Sending tick message.", GREEN);
-		// 	sendAsyncMessage(pdata->dev_handle, tickMessage, tickMessageLength);
-		// 	sendcounter++;
-		// }
-
-		// if (pendingReceive) {
-		// 	debugprint("Still waiting for message!", MAGENTA);
-		// } else {
-		// 	debugprint("CONTENTS OF RECEIVEBUFFER:", BLUE);
-		// 	printf("receiveBuffer = %s\n", receiveBuffer);
-		// 	printf("counter = %d\n", counter);
-		// 	debugprint("==================", BLUE);
-		// 	debugprint("Setting up receive.", GREEN);
-		// 	memset(receiveBuffer, 0, 512);
-		// 	receiveAsyncMessage(pdata->dev_handle, receiveBuffer);
-		// 	recvcounter++;
-		// }
-
-		// if (!pendingWrite) {
-		// 	sendAsyncMessage(pdata->dev_handle, tickMessage, tickMessageLength);
-		// 	sendcounter++;
-		// }
-
 		if (!pendingReceive) {
-			fprintf(f, "%s\n", receiveBuffer);
-			//memset(receiveBuffer, 0, 512);
-			recv_async_transfer(pdata->dev_handle, receiveBuffer, 4096, 1000);
-			recvcounter++;
+			recv_async_transfer(pdata->dev_handle, receiveBuffer, 4096*4, 10000);
 		}
+		
 		libusb_handle_events(pdata->context);
-		//usleep(30000);
-		gettimeofday(&end, NULL);
-		ms = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec));
-		s = ms/1e6;
-
-		if (s >= 1.0f) {
-			break;
-		} 
 	}
+		
 
 	/* _keepalive should be 0 at this point, so send the stop signal */
 	unsigned char stop_msg[] = "stop";
-	send_async_transfer(pdata->dev_handle, stop_msg, 4*sizeof(char), 1000);
-
-	/* Write the result buffer to a file */
-	f = fopen("out_result", "wb");
-
-	if(!f) {
-	  printf("ERROR: Failed to open output file\n");
-	}
-
-	for(int i = 0; i < NOF_IMAGES*IMG_SIZE; i++) {
-	  putc(result_buffer[i], f);
-	}
-
-	fclose(f);
+	send_async_transfer(pdata->dev_handle, stop_msg, 4*sizeof(unsigned char), 1000);
 
 	gettimeofday(&end, NULL);
 	ms = ((end.tv_sec * 1000000 + end.tv_usec) - (start.tv_sec * 1000000 + start.tv_usec));
@@ -157,7 +113,6 @@ void * mcu_runloop(void* pdata_void_ptr) {
 
 	debugprint("MCU_comm: Finished busy-wait. Closing open file.", DEFAULT);
 
-	fclose(f);
 
 	return NULL;
 }
